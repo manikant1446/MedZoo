@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User as UserIcon, HeartPulse, Stethoscope, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, HeartPulse, Stethoscope, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Register() {
@@ -10,6 +10,7 @@ export default function Register() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -73,8 +74,16 @@ export default function Register() {
             <label>Password</label>
             <div className="input-icon-wrapper">
               <Lock />
-              <input type="password" className="form-input" name="password" placeholder="Min 6 characters"
+              <input type={showPassword ? 'text' : 'password'} className="form-input password-input" name="password" placeholder="Min 6 characters"
                 value={form.password} onChange={handleChange} required minLength={6} />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
