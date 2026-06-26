@@ -6,7 +6,7 @@ let mongod = null;
 const connectDB = async () => {
   try {
     let uri = process.env.MONGO_URI || 'mongodb://localhost:27017/medzoo';
-    
+
     try {
       // Try connecting to the configured URI first
       const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
@@ -118,7 +118,7 @@ async function seedDemoData() {
     const daysAgo = Math.floor(Math.random() * 30);
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
-    
+
     await Consultation.create({
       patientId: patients[i % patients.length]._id,
       doctorId: doctors[i % doctors.length]._id,
@@ -136,5 +136,4 @@ async function seedDemoData() {
   console.log('   Patients: patient@medzoo.com | priya@medzoo.com | rahul@medzoo.com');
   console.log('   Password: password123 (all accounts)');
 }
-
 module.exports = connectDB;
