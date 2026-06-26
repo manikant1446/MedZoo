@@ -3,6 +3,7 @@ import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/common/Navbar';
 import Login from './components/common/Login';
 import Register from './components/common/Register';
+import Profile from './components/common/Profile';
 import PatientDashboard from './components/patient/PatientDashboard';
 import DoctorDiscovery from './components/patient/DoctorDiscovery';
 import ContactManager from './components/patient/ContactManager';
@@ -47,6 +48,11 @@ function App() {
         {/* Dashboard (role-based) */}
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardRouter /></ProtectedRoute>
+        } />
+
+        {/* Profile */}
+        <Route path="/profile" element={
+          <ProtectedRoute><Profile /></ProtectedRoute>
         } />
 
         {/* Patient routes */}

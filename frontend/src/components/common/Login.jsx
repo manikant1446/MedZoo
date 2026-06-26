@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Activity, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Login() {
@@ -30,10 +30,20 @@ export default function Login() {
     <div className="auth-container animate-in">
       <div className="auth-card">
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <Activity size={40} color="var(--accent-primary)" style={{ marginBottom: '0.75rem' }} />
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '0.75rem' }}>
+            <defs>
+              <linearGradient id="loginGrad" x1="8" y1="8" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#818cf8"/>
+                <stop offset="50%" stopColor="#6366f1"/>
+                <stop offset="100%" stopColor="#4f46e5"/>
+              </linearGradient>
+            </defs>
+            <path d="M18 4h12v14h14v12H30v14H18V30H4V18h14V4z" fill="none" stroke="url(#loginGrad)" strokeWidth="2.5" strokeLinejoin="round"/>
+            <polyline points="6,24 16,24 19,16 22,32 25,12 28,30 31,24 42,24" fill="none" stroke="url(#loginGrad)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
         <h1>Welcome Back</h1>
-        <p className="subtitle">Sign in to your HealNow account</p>
+        <p className="subtitle">Sign in to your MedZoo account</p>
 
         {error && <div className="error-message">{error}</div>}
 

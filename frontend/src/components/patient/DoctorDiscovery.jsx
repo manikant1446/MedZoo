@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Star, Users, ShieldCheck, Calendar, Clock, X, CheckCircle, ChevronLeft } from 'lucide-react';
+import { Search, Star, Users, ShieldCheck, Calendar, Clock, X, CheckCircle, ChevronLeft, MapPin } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 
@@ -23,6 +23,12 @@ export default function DoctorDiscovery() {
   // My Appointments
   const [myAppointments, setMyAppointments] = useState([]);
   const [showAppointments, setShowAppointments] = useState(false);
+
+  // Appointment Rating states
+  const [ratingAppointment, setRatingAppointment] = useState(null);
+  const [userRating, setUserRating] = useState(5);
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [ratingError, setRatingError] = useState('');
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -108,6 +114,24 @@ export default function DoctorDiscovery() {
     } catch (err) { console.error(err); }
   };
 
+  const submitAptRating = async (e) => {
+    e.preventDefault();
+    if (!ratingAppointment) return;
+    setSubmittingRating(true);
+    setRatingError('');
+    try {
+      await axios.post(`${API_BASE_URL}/appointments/${ratingAppointment._id}/rate`, {
+        rating: userRating
+      });
+      fetchMyAppointments();
+      setRatingAppointment(null);
+    } catch (err) {
+      setRatingError(err.response?.data?.message || 'Failed to submit rating.');
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
   const getMinDate = () => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -142,14 +166,21 @@ export default function DoctorDiscovery() {
               {myAppointments.map(apt => (
                 <div key={apt._id} className="card" style={{ position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-                    <div style={{
-                      width: 44, height: 44, borderRadius: 'var(--radius-md)',
-                      background: 'var(--gradient-secondary)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', color: 'white',
-                      fontWeight: 800, fontSize: '1.1rem'
-                    }}>
-                      {apt.doctorId?.name?.charAt(0)}
-                    </div>
+                    {apt.doctorId?.avatar ? (
+                      <img src={apt.doctorId.avatar} alt={apt.doctorId.name} style={{
+                        width: 44, height: 44, borderRadius: 'var(--radius-md)',
+                        objectFit: 'cover', flexShrink: 0
+                      }} />
+                    ) : (
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 'var(--radius-md)',
+                        background: 'var(--gradient-secondary)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', color: 'white',
+                        fontWeight: 800, fontSize: '1.1rem', flexShrink: 0
+                      }}>
+                        {apt.doctorId?.name?.charAt(0)}
+                      </div>
+                    )}
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Dr. {apt.doctorId?.name}</h4>
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -158,6 +189,7 @@ export default function DoctorDiscovery() {
                     </div>
                     <span className={`badge ${
                       apt.status === 'confirmed' ? 'badge-success' :
+                      apt.status === 'completed' ? 'badge-success' :
                       apt.status === 'pending' ? 'badge-warning' :
                       apt.status === 'cancelled' ? 'badge-danger' : 'badge-info'
                     }`}>{apt.status}</span>
@@ -179,10 +211,36 @@ export default function DoctorDiscovery() {
                   )}
 
                   {(apt.status === 'pending' || apt.status === 'confirmed') && (
-                    <button className="btn btn-sm btn-ghost" style={{ color: 'var(--accent-danger)', marginTop: '0.5rem' }}
-                      onClick={() => cancelAppointment(apt._id)}>
-                      <X size={14} /> Cancel Appointment
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([apt.doctorId?.address, apt.doctorId?.locality, apt.doctorId?.hospital || 'Doctor Clinic'].filter(Boolean).join(', '))}`}
+                         target="_blank" rel="noopener noreferrer"
+                         className="btn btn-secondary btn-sm"
+                         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-secondary)', borderColor: 'rgba(34,211,238,0.2)' }}>
+                        <MapPin size={14} /> Get Directions
+                      </a>
+                      <button className="btn btn-sm btn-ghost" style={{ color: 'var(--accent-danger)' }}
+                        onClick={() => cancelAppointment(apt._id)}>
+                        <X size={14} /> Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {apt.status === 'completed' && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      {apt.rating > 0 ? (
+                        <div style={{ display: 'flex', gap: '0.1rem', color: '#fbbf24', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginRight: '0.35rem' }}>Your rating:</span>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} size={14} fill={i < apt.rating ? '#fbbf24' : 'none'} color="#fbbf24" strokeWidth={2} />
+                          ))}
+                        </div>
+                      ) : (
+                        <button className="btn btn-primary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          onClick={() => { setRatingAppointment(apt); setUserRating(5); setRatingError(''); }}>
+                          Rate Doctor
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
@@ -217,14 +275,21 @@ export default function DoctorDiscovery() {
                 return (
                   <div key={doc._id} className="card">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                      <div style={{
-                        width: 48, height: 48, borderRadius: 'var(--radius-md)',
-                        background: 'var(--gradient-primary)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.25rem', fontWeight: 800, color: 'white'
-                      }}>
-                        {doc.name?.charAt(0)}
-                      </div>
+                      {doc.avatar ? (
+                        <img src={doc.avatar} alt={doc.name} style={{
+                          width: 48, height: 48, borderRadius: 'var(--radius-md)',
+                          objectFit: 'cover', flexShrink: 0
+                        }} />
+                      ) : (
+                        <div style={{
+                          width: 48, height: 48, borderRadius: 'var(--radius-md)',
+                          background: 'var(--gradient-primary)', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center',
+                          fontSize: '1.25rem', fontWeight: 800, color: 'white', flexShrink: 0
+                        }}>
+                          {doc.name?.charAt(0)}
+                        </div>
+                      )}
                       <div>
                         <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Dr. {doc.name}</h3>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{doc.specialty}</p>
@@ -236,13 +301,21 @@ export default function DoctorDiscovery() {
                       🏥 {doc.hospital || 'Independent Practice'}
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                       <span className="badge badge-info">
                         <Users size={12} /> {doc.patientCount} patients
                       </span>
                       <span className="badge badge-primary">
                         <Star size={12} /> {doc.qualifications || 'MBBS'}
                       </span>
+                      <span className="badge badge-success">
+                        ⭐ {doc.rating ? doc.rating.toFixed(1) : '5.0'} ({doc.ratingsCount || 0} reviews)
+                      </span>
+                      {doc.experience > 0 && (
+                        <span className="badge badge-warning" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
+                          💼 {doc.experience} yrs exp
+                        </span>
+                      )}
                     </div>
 
                     {trust?.hasTrustedVisits && (
@@ -293,18 +366,29 @@ export default function DoctorDiscovery() {
               <>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 'var(--radius-md)',
-                    background: 'var(--gradient-primary)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.25rem', fontWeight: 800, color: 'white', flexShrink: 0
-                  }}>
-                    {bookingDoctor.name?.charAt(0)}
-                  </div>
+                  {bookingDoctor.avatar ? (
+                    <img src={bookingDoctor.avatar} alt={bookingDoctor.name} style={{
+                      width: 48, height: 48, borderRadius: 'var(--radius-md)',
+                      objectFit: 'cover', flexShrink: 0
+                    }} />
+                  ) : (
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 'var(--radius-md)',
+                      background: 'var(--gradient-primary)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.25rem', fontWeight: 800, color: 'white', flexShrink: 0
+                    }}>
+                      {bookingDoctor.name?.charAt(0)}
+                    </div>
+                  )}
                   <div style={{ flex: 1 }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Book Appointment</h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
                       Dr. {bookingDoctor.name} • {bookingDoctor.specialty}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span>⭐ {bookingDoctor.rating ? bookingDoctor.rating.toFixed(1) : '5.0'} ({bookingDoctor.ratingsCount || 0} reviews)</span>
+                      {bookingDoctor.experience > 0 && <span>• 💼 {bookingDoctor.experience} Yrs Exp</span>}
                     </p>
                   </div>
                   <button onClick={() => setBookingDoctor(null)} style={{
@@ -388,6 +472,76 @@ export default function DoctorDiscovery() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Appointment Rating Modal */}
+      {ratingAppointment && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1rem'
+        }} onClick={() => !submittingRating && setRatingAppointment(null)}>
+          <div className="card" style={{
+            width: '100%', maxWidth: 400,
+            animation: 'fadeIn 0.3s ease-out',
+            textAlign: 'center'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>Rate Doctor</h3>
+              <button onClick={() => setRatingAppointment(null)} disabled={submittingRating} style={{
+                background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer'
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {ratingError && <div className="error-message">{ratingError}</div>}
+
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+              How was your consultation experience with <strong>Dr. {ratingAppointment.doctorId?.name}</strong>?
+            </p>
+
+            <form onSubmit={submitAptRating}>
+              {/* Star Selector */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setUserRating(star)}
+                    disabled={submittingRating}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: submittingRating ? 'not-allowed' : 'pointer',
+                      padding: '4px',
+                      transition: 'transform 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => { if(!submittingRating) e.currentTarget.style.transform = 'scale(1.25)'; }}
+                    onMouseLeave={(e) => { if(!submittingRating) e.currentTarget.style.transform = 'scale(1)'; }}
+                  >
+                    <Star
+                      size={32}
+                      fill={star <= userRating ? '#fbbf24' : 'none'}
+                      color="#fbbf24"
+                      strokeWidth={2}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} disabled={submittingRating}>
+                  {submittingRating ? 'Submitting...' : 'Submit Rating'}
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => setRatingAppointment(null)} disabled={submittingRating}>
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

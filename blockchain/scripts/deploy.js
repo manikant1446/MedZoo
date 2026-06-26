@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 async function main() {
-  console.log("🚀 Deploying HealNow Web3 Healthcare Platform...\n");
+  console.log("🚀 Deploying MedZoo Web3 Healthcare Platform...\n");
 
   console.log("📋 Deploying MedicalRecords...");
   const MedicalRecords = await hre.ethers.getContractFactory("MedicalRecords");

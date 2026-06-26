@@ -4,13 +4,13 @@ import { API_BASE_URL } from '../config';
 
 const defaultAuth = {
   user: null, loading: true, login: async () => {}, register: async () => {},
-  logout: () => {}, isAuthenticated: false, role: null
+  logout: () => {}, updateUser: () => {}, isAuthenticated: false, role: null
 };
 const AuthContext = createContext(defaultAuth);
 
 // Axios interceptor: always attach token from localStorage on every request
 axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('healnow_token');
+  const token = localStorage.getItem('medzoo_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -22,8 +22,8 @@ axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('healnow_token');
-      localStorage.removeItem('healnow_user');
+      localStorage.removeItem('medzoo_token');
+      localStorage.removeItem('medzoo_user');
       // Only redirect if not already on login/register
       if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
         window.location.href = '/login';
@@ -38,8 +38,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('healnow_user');
-    const token = localStorage.getItem('healnow_token');
+    const stored = localStorage.getItem('medzoo_user');
+    const token = localStorage.getItem('medzoo_token');
     if (stored && token) {
       setUser(JSON.parse(stored));
     }
@@ -49,8 +49,8 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const res = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
     const data = res.data;
-    localStorage.setItem('healnow_token', data.token);
-    localStorage.setItem('healnow_user', JSON.stringify(data));
+    localStorage.setItem('medzoo_token', data.token);
+    localStorage.setItem('medzoo_user', JSON.stringify(data));
     setUser(data);
     return data;
   };
@@ -58,23 +58,29 @@ export function AuthProvider({ children }) {
   const register = async (formData) => {
     const res = await axios.post(`${API_BASE_URL}/auth/register`, formData);
     const data = res.data;
-    localStorage.setItem('healnow_token', data.token);
-    localStorage.setItem('healnow_user', JSON.stringify(data));
+    localStorage.setItem('medzoo_token', data.token);
+    localStorage.setItem('medzoo_user', JSON.stringify(data));
     setUser(data);
     return data;
   };
 
   const logout = () => {
-    localStorage.removeItem('healnow_token');
-    localStorage.removeItem('healnow_user');
+    localStorage.removeItem('medzoo_token');
+    localStorage.removeItem('medzoo_user');
     setUser(null);
+  };
+
+  const updateUser = (updatedData) => {
+    const updated = { ...user, ...updatedData };
+    localStorage.setItem('medzoo_user', JSON.stringify(updated));
+    setUser(updated);
   };
 
   const isAuthenticated = !!user;
   const role = user?.role;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated, role }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, isAuthenticated, role }}>
       {children}
     </AuthContext.Provider>
   );

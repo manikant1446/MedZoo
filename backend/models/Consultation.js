@@ -39,6 +39,10 @@ const ConsultationSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  rating: {
+    type: Number,
+    default: 0
+  },
   prescriptions: [{
     medicine: String,
     dosage: String,

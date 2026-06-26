@@ -86,7 +86,7 @@ router.get('/doctor', protect, doctorOnly, async (req, res) => {
 router.get('/patient', protect, async (req, res) => {
   try {
     const consultations = await Consultation.find({ patientId: req.user._id })
-      .populate('doctorId', 'name email specialty hospital')
+      .populate('doctorId', 'name email specialty hospital qualifications avatar experience address locality rating ratingsCount')
       .sort({ date: -1 });
     res.json(consultations);
   } catch (error) {
@@ -187,6 +187,64 @@ router.get('/analytics', protect, doctorOnly, async (req, res) => {
   } catch (error) {
     console.error('Analytics error:', error);
     res.status(500).json({ message: 'Error fetching analytics' });
+  }
+});
+
+/**
+ * @route   POST /api/consultations/:id/rate
+ * @desc    Submit rating for a doctor after a treatment/consultation
+ */
+router.post('/:id/rate', protect, async (req, res) => {
+  try {
+    const { rating } = req.body;
+    
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    const consultation = await Consultation.findById(req.params.id);
+    if (!consultation) {
+      return res.status(404).json({ message: 'Consultation record not found' });
+    }
+
+    // Verify ownership
+    if (consultation.patientId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to rate this consultation' });
+    }
+
+    // Update rating
+    consultation.rating = Number(rating);
+    await consultation.save();
+
+    // Recalculate doctor ratings across BOTH consultations and appointments
+    const doctorId = consultation.doctorId;
+    const Appointment = require('../models/Appointment');
+    
+    const allConsultationRatings = await Consultation.find({ doctorId, rating: { $gt: 0 } }).select('rating');
+    const allAppointmentRatings = await Appointment.find({ doctorId, rating: { $gt: 0 } }).select('rating');
+    
+    let totalSum = 0;
+    let totalCount = 0;
+    
+    allConsultationRatings.forEach(r => { totalSum += r.rating; totalCount++; });
+    allAppointmentRatings.forEach(r => { totalSum += r.rating; totalCount++; });
+    
+    const average = totalCount > 0 ? Math.round((totalSum / totalCount) * 10) / 10 : 5.0;
+
+    await User.findByIdAndUpdate(doctorId, {
+      rating: average,
+      ratingsCount: totalCount
+    });
+
+    const populated = await consultation.populate([
+      { path: 'patientId', select: 'name email' },
+      { path: 'doctorId', select: 'name email specialty rating ratingsCount' }
+    ]);
+
+    res.json(populated);
+  } catch (error) {
+    console.error('Rate consultation error:', error);
+    res.status(500).json({ message: 'Server error during rating submission' });
   }
 });
 

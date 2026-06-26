@@ -4,10 +4,12 @@ import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CATEGORIES = ['Cardiology','Dermatology','Neurology','Orthopedics','Pediatrics','General','Oncology','Psychiatry','Other'];
 
 export default function PatientList() {
+  const { user } = useAuth();
   const [consultations, setConsultations] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -54,20 +56,106 @@ export default function PatientList() {
 
   const generateReport = () => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('HealNow - Consultation Report', 14, 22);
+    
+    // Top colored banner
+    doc.setFillColor(79, 70, 229); // Indigo background
+    doc.rect(0, 0, 210, 30, 'F');
+    
+    // Title
+    doc.setFontSize(22);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MedZoo', 14, 20);
+    
+    // Subtitle
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.setTextColor(200, 200, 255);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Decentralized Health Records Platform', 52, 19);
+    
+    // Doctor Details Section (Left Col)
+    doc.setFontSize(12);
+    doc.setTextColor(31, 41, 55); // Dark grey text
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Doctor: Dr. ${user?.name || 'N/A'}`, 14, 42);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(75, 85, 99);
+    doc.text(`Specialty: ${user?.specialty || 'General Practice'}`, 14, 48);
+    doc.text(`Hospital: ${user?.hospital || 'Private Practice'}`, 14, 54);
+    
+    const rawDid = user?.did || 'N/A';
+    const cleanDid = rawDid.length > 50 ? `${rawDid.slice(0, 50)}...` : rawDid;
+    doc.text(`DID: ${cleanDid}`, 14, 60);
+
+    // Report Summary (Right Col)
+    doc.setTextColor(31, 41, 55);
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, 140, 42);
+    doc.text(`Total Records: ${filtered.length}`, 140, 48);
+    
+    // Separator Line
+    doc.setDrawColor(229, 231, 235);
+    doc.line(14, 66, 196, 66);
+    
     const tableData = filtered.map(c => ([
-      c.patientId?.name || 'Unknown', c.category, c.diagnosis || '—',
-      c.status, new Date(c.date).toLocaleDateString()
+      c.patientId?.name || 'Unknown',
+      c.category,
+      c.diagnosis || '—',
+      c.status.toUpperCase(),
+      new Date(c.date).toLocaleDateString('en-IN')
     ]));
+    
     autoTable(doc, {
       head: [['Patient', 'Category', 'Diagnosis', 'Status', 'Date']],
-      body: tableData, startY: 36, theme: 'striped',
-      headStyles: { fillColor: [99, 102, 241] }
+      body: tableData,
+      startY: 72,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [79, 70, 229],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'left'
+      },
+      bodyStyles: {
+        textColor: [55, 65, 81],
+        fontSize: 9
+      },
+      alternateRowStyles: {
+        fillColor: [249, 250, 251]
+      },
+      columnStyles: {
+        3: { fontStyle: 'bold' } // bold status column
+      },
+      didParseCell: function(data) {
+        if (data.column.index === 3 && data.cell.section === 'body') {
+          const val = data.cell.raw.toLowerCase();
+          if (val === 'treated') {
+            data.cell.styles.textColor = [16, 185, 129]; // green
+          } else if (val === 'pending') {
+            data.cell.styles.textColor = [245, 158, 11]; // amber
+          } else if (val === 'referred') {
+            data.cell.styles.textColor = [99, 102, 241]; // indigo
+          } else if (val === 'follow-up') {
+            data.cell.styles.textColor = [34, 211, 238]; // cyan
+          }
+        }
+      },
+      margin: { top: 72, bottom: 25, left: 14, right: 14 }
     });
-    doc.save('healnow-report.pdf');
+
+    // Page numbers and footer disclaimer on all pages
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(156, 163, 175);
+      doc.text('This record is cryptographically secure and stored on-chain on MedZoo Decentrailzed Network.', 14, 285);
+      doc.text(`Page ${i} of ${pageCount}`, 180, 285);
+    }
+
+    doc.save('medzoo-report.pdf');
   };
 
   const filtered = consultations.filter(c => {
@@ -87,7 +175,7 @@ export default function PatientList() {
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button className="btn btn-secondary" onClick={generateReport}>
-            <Download size={16} /> Export PDF
+            <Download size={16} /> Records
           </button>
           <button className="btn btn-primary" onClick={() => { setShowForm(!showForm); setFormError(''); setFormSuccess(''); }}>
             <Plus size={16} /> New Consultation

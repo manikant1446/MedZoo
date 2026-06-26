@@ -18,7 +18,7 @@ router.get('/', protect, async (req, res) => {
       ];
     }
     const doctors = await User.find(filter)
-      .select('name email specialty hospital qualifications walletAddress isVerified did avatar');
+      .select('name email specialty hospital qualifications walletAddress isVerified did avatar experience address locality rating ratingsCount');
     const doctorsWithStats = await Promise.all(
       doctors.map(async (doc) => {
         const patients = await Consultation.distinct('patientId', { doctorId: doc._id });
@@ -34,7 +34,7 @@ router.get('/', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
   try {
     const doctor = await User.findById(req.params.id)
-      .select('name email specialty hospital qualifications walletAddress isVerified did avatar');
+      .select('name email specialty hospital qualifications walletAddress isVerified did avatar experience address locality rating ratingsCount');
     if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
     const patients = await Consultation.distinct('patientId', { doctorId: doctor._id });
     res.json({ ...doctor.toObject(), patientCount: patients.length });

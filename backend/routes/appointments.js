@@ -52,8 +52,8 @@ router.post('/', protect, async (req, res) => {
     });
 
     const populated = await appointment.populate([
-      { path: 'patientId', select: 'name email' },
-      { path: 'doctorId', select: 'name email specialty hospital' }
+      { path: 'patientId', select: 'name email avatar' },
+      { path: 'doctorId', select: 'name email specialty hospital qualifications avatar experience address locality rating ratingsCount' }
     ]);
 
     res.status(201).json(populated);
@@ -73,7 +73,7 @@ router.post('/', protect, async (req, res) => {
 router.get('/patient', protect, async (req, res) => {
   try {
     const appointments = await Appointment.find({ patientId: req.user._id })
-      .populate('doctorId', 'name email specialty hospital')
+      .populate('doctorId', 'name email specialty hospital qualifications avatar experience address locality rating ratingsCount')
       .sort({ date: -1 });
     res.json(appointments);
   } catch (error) {
@@ -165,13 +165,71 @@ router.put('/:id/status', protect, async (req, res) => {
     await appointment.save();
 
     const populated = await appointment.populate([
-      { path: 'patientId', select: 'name email' },
-      { path: 'doctorId', select: 'name email specialty hospital' }
+      { path: 'patientId', select: 'name email avatar' },
+      { path: 'doctorId', select: 'name email specialty hospital qualifications avatar experience address locality rating ratingsCount' }
     ]);
 
     res.json(populated);
   } catch (error) {
     res.status(500).json({ message: 'Error updating appointment' });
+  }
+});
+
+/**
+ * @route   POST /api/appointments/:id/rate
+ * @desc    Submit rating for a doctor after a completed appointment
+ */
+router.post('/:id/rate', protect, async (req, res) => {
+  try {
+    const { rating } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Verify ownership
+    if (appointment.patientId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to rate this appointment' });
+    }
+
+    // Update rating
+    appointment.rating = Number(rating);
+    await appointment.save();
+
+    // Recalculate doctor ratings across BOTH consultations and appointments
+    const doctorId = appointment.doctorId;
+    const Consultation = require('../models/Consultation');
+    
+    const allConsultationRatings = await Consultation.find({ doctorId, rating: { $gt: 0 } }).select('rating');
+    const allAppointmentRatings = await Appointment.find({ doctorId, rating: { $gt: 0 } }).select('rating');
+    
+    let totalSum = 0;
+    let totalCount = 0;
+    
+    allConsultationRatings.forEach(r => { totalSum += r.rating; totalCount++; });
+    allAppointmentRatings.forEach(r => { totalSum += r.rating; totalCount++; });
+    
+    const average = totalCount > 0 ? Math.round((totalSum / totalCount) * 10) / 10 : 5.0;
+
+    await User.findByIdAndUpdate(doctorId, {
+      rating: average,
+      ratingsCount: totalCount
+    });
+
+    const populated = await appointment.populate([
+      { path: 'patientId', select: 'name email avatar' },
+      { path: 'doctorId', select: 'name email specialty hospital qualifications avatar experience address locality rating ratingsCount' }
+    ]);
+
+    res.json(populated);
+  } catch (error) {
+    console.error('Rate appointment error:', error);
+    res.status(500).json({ message: 'Server error during rating submission' });
   }
 });
 

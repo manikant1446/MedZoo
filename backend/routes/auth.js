@@ -8,7 +8,7 @@ const router = express.Router();
 const generateToken = (id, email, role, walletAddress) => {
   return jwt.sign(
     { id, email, role, walletAddress },
-    process.env.JWT_SECRET || 'healnow_super_secret_key_2026',
+    process.env.JWT_SECRET || 'medzoo_super_secret_key_2026',
     { expiresIn: '30d' }
   );
 };
@@ -67,6 +67,13 @@ router.post('/register', async (req, res) => {
       did: user.did,
       specialty: user.specialty,
       hospital: user.hospital,
+      qualifications: user.qualifications,
+      avatar: user.avatar,
+      experience: user.experience,
+      address: user.address,
+      locality: user.locality,
+      rating: user.rating,
+      ratingsCount: user.ratingsCount,
       token,
     });
   } catch (error) {
@@ -108,6 +115,13 @@ router.post('/login', async (req, res) => {
       did: user.did,
       specialty: user.specialty,
       hospital: user.hospital,
+      qualifications: user.qualifications,
+      avatar: user.avatar,
+      experience: user.experience,
+      address: user.address,
+      locality: user.locality,
+      rating: user.rating,
+      ratingsCount: user.ratingsCount,
       isVerified: user.isVerified,
       token,
     });
@@ -124,6 +138,43 @@ router.post('/login', async (req, res) => {
 const { protect } = require('../middleware/auth');
 router.get('/me', protect, async (req, res) => {
   res.json(req.user);
+});
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update user profile details (avatar, name, address, locality, experience, hospital)
+ */
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const { name, avatar, address, locality, experience, hospital } = req.body;
+
+    if (name) user.name = name;
+    if (avatar !== undefined) user.avatar = avatar;
+    if (address !== undefined) user.address = address;
+    if (locality !== undefined) user.locality = locality;
+
+    if (user.role === 'doctor') {
+      if (experience !== undefined) {
+        user.experience = Number(experience) || 0;
+      }
+      if (hospital !== undefined) {
+        user.hospital = hospital;
+      }
+    }
+
+    await user.save();
+
+    const updatedUser = await User.findById(user._id).select('-password');
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Server error during profile update' });
+  }
 });
 
 module.exports = router;

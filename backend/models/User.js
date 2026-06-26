@@ -48,6 +48,26 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  experience: {
+    type: Number,
+    default: 0
+  },
+  address: {
+    type: String,
+    default: ''
+  },
+  locality: {
+    type: String,
+    default: ''
+  },
+  rating: {
+    type: Number,
+    default: 5.0
+  },
+  ratingsCount: {
+    type: Number,
+    default: 0
+  },
   // DID (Decentralized Identifier)
   did: {
     type: String,

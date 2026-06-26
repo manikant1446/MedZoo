@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="./frontend/public/favicon.svg" alt="HealNow Logo" width="120" />
+  <img src="./frontend/public/favicon.svg" alt="MedZoo Logo" width="120" />
   
-  <h1>🏥 HealNow - Web3 Healthcare Platform</h1>
+  <h1>🏥 MedZoo - Web3 Healthcare Platform</h1>
   
   <p><strong>A decentralized, trust-based healthcare and doctor-patient collaboration platform.</strong></p>
   <p>
@@ -16,7 +16,7 @@
 
 <br />
 
-HealNow leverages the immutability of blockchain technology while maintaining a seamless Web2-like experience using managed decentralized wallets. It introduces a powerful social graph-based trust system for transparent healthcare collaboration among patients, doctors, and medical specialists.
+MedZoo leverages the immutability of blockchain technology while maintaining a seamless Web2-like experience using managed decentralized wallets. It introduces a powerful social graph-based trust system for transparent healthcare collaboration among patients, doctors, and medical specialists.
 
 ---
 
@@ -50,11 +50,11 @@ HealNow leverages the immutability of blockchain technology while maintaining a 
 
 ## 🚀 Quick Start
 
-Welcome to HealNow! We are committed to revolutionizing healthcare with secure, decentralized, and user-friendly technology.
+Welcome to MedZoo! We are committed to revolutionizing healthcare with secure, decentralized, and user-friendly technology.
 
-You can now access HealNow instantly at:
+You can now access MedZoo instantly at:
 
-👉 [https://heal-now-rust.vercel.app/](https://heal-now-rust.vercel.app/)
+👉 [https://med-zoo-rust.vercel.app/](https://med-zoo-rust.vercel.app/)
 
 ---
 
@@ -66,18 +66,18 @@ The application automatically seeds the following accounts for immediate testing
 
 | Role | Name | Specialty | Email |
 | :--- | :--- | :--- | :--- |
-| **Doctor** | Dr. Sarah Johnson | Cardiology | `doctor@healnow.com` |
-| **Doctor** | Dr. Michael Chen | Neurology | `neurologist@healnow.com` |
-| **Patient** | Alex Thompson | - | `patient@healnow.com` |
-| **Patient** | Priya Sharma | - | `priya@healnow.com` |
-| **Patient** | Rahul Verma | - | `rahul@healnow.com` |
+| **Doctor** | Dr. Sarah Johnson | Cardiology | `doctor@medzoo.com` |
+| **Doctor** | Dr. Michael Chen | Neurology | `neurologist@medzoo.com` |
+| **Patient** | Alex Thompson | - | `patient@medzoo.com` |
+| **Patient** | Priya Sharma | - | `priya@medzoo.com` |
+| **Patient** | Rahul Verma | - | `rahul@medzoo.com` |
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-HealNow/
+MedZoo/
 ├── backend/
 │   ├── config/        # Database & Seed Scripts
 │   ├── middleware/    # JWT Auth & Roles (doctorOnly, patientOnly)

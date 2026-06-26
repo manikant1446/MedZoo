@@ -11,7 +11,8 @@ const appointmentSchema = new mongoose.Schema({
     enum: ['pending', 'confirmed', 'cancelled', 'completed'],
     default: 'pending'
   },
-  notes: { type: String, default: '' }
+  notes: { type: String, default: '' },
+  rating: { type: Number, default: 0 }
 }, { timestamps: true });
 
 // Prevent double-booking: same doctor, same date, same time slot

@@ -5,7 +5,7 @@ let mongod = null;
 
 const connectDB = async () => {
   try {
-    let uri = process.env.MONGO_URI || 'mongodb://localhost:27017/healnow';
+    let uri = process.env.MONGO_URI || 'mongodb://localhost:27017/medzoo';
     
     try {
       // Try connecting to the configured URI first
@@ -39,7 +39,7 @@ async function seedDemoData() {
   // Create demo doctor
   const doctorWallet = ethers.Wallet.createRandom();
   const doctor = await User.create({
-    email: 'doctor@healnow.com',
+    email: 'doctor@medzoo.com',
     password: 'password123',
     name: 'Sarah Johnson',
     role: 'doctor',
@@ -55,7 +55,7 @@ async function seedDemoData() {
   // Create demo doctor 2
   const doc2Wallet = ethers.Wallet.createRandom();
   const doctor2 = await User.create({
-    email: 'neurologist@healnow.com',
+    email: 'neurologist@medzoo.com',
     password: 'password123',
     name: 'Michael Chen',
     role: 'doctor',
@@ -71,7 +71,7 @@ async function seedDemoData() {
   // Create demo patient 1
   const p1Wallet = ethers.Wallet.createRandom();
   const patient1 = await User.create({
-    email: 'patient@healnow.com',
+    email: 'patient@medzoo.com',
     password: 'password123',
     name: 'Alex Thompson',
     role: 'patient',
@@ -83,7 +83,7 @@ async function seedDemoData() {
   // Create demo patient 2
   const p2Wallet = ethers.Wallet.createRandom();
   const patient2 = await User.create({
-    email: 'priya@healnow.com',
+    email: 'priya@medzoo.com',
     password: 'password123',
     name: 'Priya Sharma',
     role: 'patient',
@@ -95,7 +95,7 @@ async function seedDemoData() {
   // Create demo patient 3
   const p3Wallet = ethers.Wallet.createRandom();
   const patient3 = await User.create({
-    email: 'rahul@healnow.com',
+    email: 'rahul@medzoo.com',
     password: 'password123',
     name: 'Rahul Verma',
     role: 'patient',
@@ -132,8 +132,8 @@ async function seedDemoData() {
   }
 
   console.log('✅ Demo data seeded:');
-  console.log('   Doctors:  doctor@healnow.com | neurologist@healnow.com');
-  console.log('   Patients: patient@healnow.com | priya@healnow.com | rahul@healnow.com');
+  console.log('   Doctors:  doctor@medzoo.com | neurologist@medzoo.com');
+  console.log('   Patients: patient@medzoo.com | priya@medzoo.com | rahul@medzoo.com');
   console.log('   Password: password123 (all accounts)');
 }
 
