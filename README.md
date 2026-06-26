@@ -54,7 +54,7 @@ Welcome to MedZoo! We are committed to revolutionizing healthcare with secure, d
 
 You can now access MedZoo instantly at:
 
-👉 [https://med-zoo-rust.vercel.app/](https://med-zoo-rust.vercel.app/)
+👉 [https://medzoo.vercel.app/login](https://medzoo.vercel.app/login)
 
 ---
 
