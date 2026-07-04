@@ -12,15 +12,19 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/contacts', require('./routes/contacts'));
-app.use('/api/consultations', require('./routes/consultations'));
-app.use('/api/referrals', require('./routes/referrals'));
-app.use('/api/doctors', require('./routes/doctors'));
-app.use('/api/appointments', require('./routes/appointments'));
+// Note: Vercel experimentalServices strips /api prefix before forwarding to backend.
+// So routes are registered WITHOUT /api prefix for Vercel compatibility.
+// Locally, frontend calls /api/* which goes directly to port 5001 (no stripping).
+const prefix = process.env.VERCEL ? '' : '/api';
+app.use(`${prefix}/auth`, require('./routes/auth'));
+app.use(`${prefix}/contacts`, require('./routes/contacts'));
+app.use(`${prefix}/consultations`, require('./routes/consultations'));
+app.use(`${prefix}/referrals`, require('./routes/referrals'));
+app.use(`${prefix}/doctors`, require('./routes/doctors'));
+app.use(`${prefix}/appointments`, require('./routes/appointments'));
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get(`${prefix}/health`, (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
