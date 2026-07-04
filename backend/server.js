@@ -24,8 +24,8 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+// For local development — do NOT listen on Vercel (serverless handles it)
+if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 5001;
   app.listen(PORT, () => {
     console.log(`🏥 MedZoo API running on port ${PORT}`);
