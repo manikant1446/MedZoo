@@ -13,6 +13,23 @@ const connectDB = async () => {
       console.log(`MongoDB Connected: ${conn.connection.host}`);
       return;
     } catch (err) {
+      if (process.env.VERCEL === '1') {
+        console.error('❌ MongoDB Atlas connection failed on Vercel:', err.message);
+        throw err;
+      }
+      
+      // If we failed to connect to Atlas, try local MongoDB fallback before memory server
+      if (uri !== 'mongodb://localhost:27017/medzoo') {
+        try {
+          console.log('Atlas connection failed. Trying local MongoDB fallback...');
+          const conn = await mongoose.connect('mongodb://localhost:27017/medzoo', { serverSelectionTimeoutMS: 2000 });
+          console.log(`MongoDB Connected (Local Fallback): ${conn.connection.host}`);
+          return;
+        } catch (localErr) {
+          console.log('Local MongoDB fallback failed.');
+        }
+      }
+      
       console.log('Local MongoDB not available, starting in-memory server...');
     }
 
