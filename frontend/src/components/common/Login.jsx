@@ -32,8 +32,8 @@ export default function Login() {
   return (
     <div className="auth-container animate-in">
       <div className="auth-card">
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '0.75rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '0.25rem' }}>
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="loginGrad" x1="8" y1="8" x2="40" y2="40" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stopColor="#818cf8"/>
@@ -45,42 +45,33 @@ export default function Login() {
             <polyline points="6,24 16,24 19,16 22,32 25,12 28,30 31,24 42,24" fill="none" stroke="url(#loginGrad)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <h1>Welcome Back</h1>
-        <p className="subtitle">Sign in with your phone number or email</p>
+        <h1 style={{ textAlign: 'center', display: 'block', width: '100%', marginBottom: '1.5rem' }}>Welcome Back</h1>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Phone Number or Email</label>
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
             <div className="input-icon-wrapper">
               {isPhone ? <Phone size={18} /> : <AtSign size={18} />}
               <input
                 type="text"
                 className="form-input"
-                placeholder="9876543210 or you@example.com"
+                placeholder="Email address or mobile number"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required
                 autoComplete="username"
               />
             </div>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-              {isPhone ? '📱 Logging in with phone number' : '📧 Logging in with email address'}
-            </p>
           </div>
 
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-              <label style={{ marginBottom: 0 }}>Password</label>
-              <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', textDecoration: 'none' }}>Forgot password?</Link>
-            </div>
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
             <div className="input-icon-wrapper">
               <Lock />
               <input
                 type={showPassword ? 'text' : 'password'}
                 className="form-input password-input"
-                placeholder="••••••••"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -97,14 +88,34 @@ export default function Login() {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
-            <ArrowRight size={18} />
+          <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
+            {loading ? 'Logging in...' : 'Log in'}
           </button>
         </form>
 
-        <div className="auth-footer">
-          Don't have an account? <Link to="/register">Create one</Link>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.25rem', marginBottom: '1.25rem' }}>
+          <Link to="/forgot-password" style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none' }}>
+            Forgotten password?
+          </Link>
+        </div>
+
+        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '1.25rem 0' }} />
+
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Link to="/register" className="btn btn-secondary" style={{
+            borderColor: 'var(--accent-primary)',
+            color: 'var(--accent-primary)',
+            background: 'transparent',
+            padding: '0.6rem 2rem',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            textDecoration: 'none',
+            borderRadius: 'var(--radius-md)',
+            display: 'inline-block',
+            textAlign: 'center'
+          }}>
+            Create new account
+          </Link>
         </div>
       </div>
     </div>

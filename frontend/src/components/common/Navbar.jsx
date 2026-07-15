@@ -133,10 +133,12 @@ export default function Navbar() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Link to="/login" className="btn btn-ghost btn-sm">Sign In</Link>
-            <Link to="/register" className="btn btn-primary btn-sm">Register</Link>
-          </div>
+          !['/login', '/register', '/forgot-password'].some(p => location.pathname.startsWith(p)) && (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Link to="/login" className="btn btn-ghost btn-sm">Sign In</Link>
+              <Link to="/register" className="btn btn-primary btn-sm">Register</Link>
+            </div>
+          )
         )}
       </div>
     </nav>

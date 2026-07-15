@@ -77,9 +77,6 @@ export default function Register() {
                 value={form.phone} onChange={handleChange} required
                 pattern="[0-9+\s\-().]{7,15}" title="Enter a valid phone number" />
             </div>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-              You can add your email later from Profile settings
-            </p>
           </div>
 
           <div className="form-group">
