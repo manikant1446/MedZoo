@@ -84,6 +84,11 @@ const UserSchema = new mongoose.Schema({
   avatar: {
     type: String,
     default: ''
+  },
+  contactsPermissionStatus: {
+    type: String,
+    enum: ['prompt', 'granted', 'denied'],
+    default: 'prompt'
   }
 }, {
   timestamps: true

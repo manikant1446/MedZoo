@@ -3,6 +3,7 @@ import { FileText, ShieldCheck, Activity, Upload, Star, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import ContactPermissionModal from './ContactPermissionModal';
 
 export default function PatientDashboard() {
   const { user } = useAuth();
@@ -216,6 +217,9 @@ export default function PatientDashboard() {
           </div>
         </div>
       )}
+
+      {/* Contacts Sync Permission Overlay */}
+      <ContactPermissionModal />
     </div>
   );
 }

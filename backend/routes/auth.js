@@ -74,6 +74,7 @@ router.post('/register', async (req, res) => {
       locality: user.locality,
       rating: user.rating,
       ratingsCount: user.ratingsCount,
+      contactsPermissionStatus: user.contactsPermissionStatus,
       token,
     });
   } catch (error) {
@@ -123,6 +124,7 @@ router.post('/login', async (req, res) => {
       rating: user.rating,
       ratingsCount: user.ratingsCount,
       isVerified: user.isVerified,
+      contactsPermissionStatus: user.contactsPermissionStatus,
       token,
     });
   } catch (error) {

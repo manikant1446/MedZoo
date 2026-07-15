@@ -110,4 +110,69 @@ router.get('/trust-check/:doctorId', protect, async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/contacts/sync
+ * @desc    Bulk sync contact emails from device or mock data
+ */
+router.post('/sync', protect, async (req, res) => {
+  try {
+    const { emails } = req.body;
+    if (!emails || !Array.isArray(emails)) {
+      return res.status(400).json({ message: 'Emails array is required' });
+    }
+
+    const lowercaseEmails = emails.map(email => email.toLowerCase().trim());
+
+    // Find users with these emails (excluding current user)
+    const matchingUsers = await User.find({
+      email: { $in: lowercaseEmails },
+      _id: { $ne: req.user._id }
+    });
+
+    const syncedContacts = [];
+    for (const u of matchingUsers) {
+      // Check if this contact already exists for the user
+      const existing = await Contact.findOne({
+        userId: req.user._id,
+        contactUserId: u._id
+      });
+
+      if (!existing) {
+        const c = await Contact.create({
+          userId: req.user._id,
+          contactUserId: u._id,
+          nickname: u.name,
+          trustLevel: 3 // Default trust level
+        });
+        syncedContacts.push(c);
+      }
+    }
+
+    // Update user's contacts permission status to 'granted'
+    await User.findByIdAndUpdate(req.user._id, { contactsPermissionStatus: 'granted' });
+
+    res.status(200).json({
+      message: `Successfully synced ${syncedContacts.length} contacts`,
+      contactsCount: syncedContacts.length
+    });
+  } catch (error) {
+    console.error('Contacts sync error:', error);
+    res.status(500).json({ message: 'Server error during contacts synchronization' });
+  }
+});
+
+/**
+ * @route   POST /api/contacts/deny
+ * @desc    Deny contacts permission access
+ */
+router.post('/deny', protect, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user._id, { contactsPermissionStatus: 'denied' });
+    res.json({ message: 'Contacts permission status updated to denied' });
+  } catch (error) {
+    console.error('Deny contacts permission error:', error);
+    res.status(500).json({ message: 'Server error during permission update' });
+  }
+});
+
 module.exports = router;
