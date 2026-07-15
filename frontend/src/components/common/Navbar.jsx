@@ -1,13 +1,74 @@
+import { useState, useEffect } from 'react';
 import { LogOut } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../../config';
 
 export default function Navbar() {
   const { user, isAuthenticated, role, logout } = useAuth();
   const location = useLocation();
+  const [emergencyAlert, setEmergencyAlert] = useState(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const socketUrl = API_BASE_URL.replace('/api', '');
+    const socket = io(socketUrl);
+
+    socket.on('emergency_trigger', (data) => {
+      console.log('🚨 WebSockets Emergency Received:', data);
+      setEmergencyAlert(data);
+    });
+
+    socket.on('appointment_update', (data) => {
+      console.log('📬 WebSockets Appointment Update Received:', data);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [isAuthenticated]);
 
   return (
-    <nav className="navbar">
+    <>
+      {emergencyAlert && (
+        <div style={{
+          background: '#ef4444',
+          color: 'white',
+          textAlign: 'center',
+          padding: '0.5rem 1rem',
+          fontSize: '0.88rem',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.75rem',
+          boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
+          zIndex: 2000,
+          position: 'relative',
+          animation: 'criticalBlink 1.5s ease-in-out infinite'
+        }}>
+          <span>🚨 EMERGENCY PROTOCOL: Patient <strong>{emergencyAlert.patientId?.name}</strong> has triggered an urgent care request!</span>
+          <button 
+            onClick={() => setEmergencyAlert(null)}
+            style={{
+              background: 'rgba(255,255,255,0.25)',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              padding: '0.15rem 0.5rem',
+              borderRadius: '4px',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              marginLeft: '0.5rem'
+            }}
+          >
+            DISMISS
+          </button>
+        </div>
+      )}
+      <nav className="navbar">
       <Link to="/" className="navbar-brand">
         <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -79,5 +140,6 @@ export default function Navbar() {
         )}
       </div>
     </nav>
+    </>
   );
 }

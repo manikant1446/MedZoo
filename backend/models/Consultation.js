@@ -13,6 +13,11 @@ const ConsultationSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  patientPhone: {
+    type: String,
+    required: true,
+    trim: true
+  },
   date: {
     type: Date,
     default: Date.now

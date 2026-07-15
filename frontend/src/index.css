@@ -88,8 +88,37 @@ a:hover { text-decoration: underline; }
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+@keyframes criticalBlink {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #ef4444, 0 0 12px rgba(239, 68, 68, 0.5), 0 0 32px rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+  }
+  50% {
+    box-shadow: 0 0 0 4px #ef4444, 0 0 28px rgba(239, 68, 68, 0.9), 0 0 60px rgba(239, 68, 68, 0.4);
+    border-color: #ff6b6b;
+  }
+}
 .animate-in { animation: fadeIn 0.5s ease-out forwards; }
 .slide-in { animation: slideIn 0.4s ease-out forwards; }
+.critical-card {
+  animation: criticalBlink 1.2s ease-in-out infinite !important;
+  border: 2px solid #ef4444 !important;
+  position: relative;
+}
+.critical-card::before {
+  content: '🚨 CRITICAL';
+  position: absolute;
+  top: -12px;
+  right: 12px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  z-index: 10;
+}
 
 /* ===== NAVBAR ===== */
 .navbar {

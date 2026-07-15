@@ -15,7 +15,7 @@ export default function PatientList() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
-    patientName: '', patientEmail: '', diagnosis: '', category: 'General', status: 'treated', notes: ''
+    patientName: '', patientPhone: '', patientEmail: '', diagnosis: '', category: 'General', status: 'treated', notes: ''
   });
   const [loading, setLoading] = useState(true);
   const [formError, setFormError] = useState('');
@@ -38,15 +38,16 @@ export default function PatientList() {
     try {
       const res = await axios.post(`${API_BASE_URL}/consultations`, {
         patientName: form.patientName,
-        patientEmail: form.patientEmail,
+        patientPhone: form.patientPhone,
+        patientEmail: form.patientEmail || undefined,
         diagnosis: form.diagnosis,
         category: form.category,
         status: form.status,
         notes: form.notes
       });
-      const pName = res.data.patientId?.name || form.patientName || form.patientEmail;
+      const pName = res.data.patientId?.name || form.patientName || form.patientPhone;
       setFormSuccess(`Consultation for "${pName}" created successfully!`);
-      setForm({ patientName: '', patientEmail: '', diagnosis: '', category: 'General', status: 'treated', notes: '' });
+      setForm({ patientName: '', patientPhone: '', patientEmail: '', diagnosis: '', category: 'General', status: 'treated', notes: '' });
       fetchConsultations();
       setTimeout(() => { setShowForm(false); setFormSuccess(''); }, 2500);
     } catch (err) {
@@ -216,7 +217,7 @@ export default function PatientList() {
 
           <form onSubmit={createConsultation}>
             {/* Patient Info Row */}
-            <div className="grid grid-2" style={{ marginBottom: '0.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '0.25rem' }}>
               <div className="form-group">
                 <label>Patient Name</label>
                 <input type="text" className="form-input" placeholder="e.g. Rahul Verma"
@@ -224,10 +225,15 @@ export default function PatientList() {
                   required />
               </div>
               <div className="form-group">
-                <label>Patient Email</label>
+                <label>📞 Phone Number <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
+                <input type="tel" className="form-input" placeholder="e.g. 9876543210"
+                  value={form.patientPhone} onChange={e => setForm({ ...form, patientPhone: e.target.value })}
+                  required pattern="[0-9]{10,15}" title="Enter a valid phone number" />
+              </div>
+              <div className="form-group">
+                <label>Email Address <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.75rem' }}>(optional)</span></label>
                 <input type="email" className="form-input" placeholder="e.g. rahul@example.com"
-                  value={form.patientEmail} onChange={e => setForm({ ...form, patientEmail: e.target.value })}
-                  required />
+                  value={form.patientEmail} onChange={e => setForm({ ...form, patientEmail: e.target.value })} />
               </div>
             </div>
 

@@ -8,8 +8,21 @@ const appointmentSchema = new mongoose.Schema({
   reason: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+    enum: ['pending', 'confirmed', 'in-progress', 'critical', 'completed', 'cancelled'],
     default: 'pending'
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['Paid', 'Unpaid'],
+    default: 'Unpaid'
+  },
+  isEmergency: {
+    type: Boolean,
+    default: false
+  },
+  cancellationReason: {
+    type: String,
+    default: ''
   },
   notes: { type: String, default: '' },
   rating: { type: Number, default: 0 }

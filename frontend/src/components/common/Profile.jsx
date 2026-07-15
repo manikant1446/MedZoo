@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { User, Mail, Shield, Award, Key, MapPin, Building, Calendar, Star, Upload, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { User, Mail, Phone, Shield, Award, MapPin, Building, Star, Upload, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 
@@ -28,6 +28,7 @@ export default function Profile() {
   const { user, updateUser } = useAuth();
   const [form, setForm] = useState({
     name: user?.name || '',
+    email: user?.email || '',
     avatar: user?.avatar || '',
     address: user?.address || '',
     locality: user?.locality || '',
@@ -76,7 +77,7 @@ export default function Profile() {
     setSaving(true);
 
     try {
-      const res = await axios.put(`${API_BASE_URL}/auth/profile`, form);
+      const res = await axios.put(`${API_BASE_URL}/auth/profile`, { ...form, email: form.email || null });
       updateUser(res.data);
       setSuccess('Profile updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
@@ -196,13 +197,13 @@ export default function Profile() {
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Qualifications and role parameters are cryptographically verified and locked</p>
             </div>
 
-            {/* Locked Field: Email & Role */}
+            {/* Editable Fields: Phone, Email & Role info */}
             <div className="grid grid-2" style={{ marginBottom: '0.5rem' }}>
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Mail size={14} /> Email Address <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(Locked)</span>
+                  <Phone size={14} /> Phone Number <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(Locked)</span>
                 </label>
-                <input type="text" className="form-input" value={user?.email || ''} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                <input type="text" className="form-input" value={user?.phone || 'Not set'} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
               </div>
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -210,6 +211,15 @@ export default function Profile() {
                 </label>
                 <input type="text" className="form-input" value={user?.role?.toUpperCase() || ''} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
               </div>
+            </div>
+
+            {/* Editable: Email address */}
+            <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Mail size={14} /> Email Address <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.75rem' }}>(optional — for login &amp; notifications)</span>
+              </label>
+              <input type="email" className="form-input" name="email" placeholder="Add your email address"
+                value={form.email} onChange={handleChange} />
             </div>
 
             {/* Editable Field: Full Name */}
@@ -268,25 +278,6 @@ export default function Profile() {
                   <MapPin size={14} /> Full Clinic/Residence Address
                 </label>
                 <input type="text" className="form-input" name="address" value={form.address} onChange={handleChange} placeholder="e.g. Flat 101, Parkside Enclave" />
-              </div>
-            </div>
-
-            {/* Cryptographic info displaying read-only */}
-            <div style={{
-              background: 'rgba(99,115,146,0.06)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-md)', padding: '1rem',
-              fontSize: '0.85rem', color: 'var(--text-secondary)',
-              marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                <Key size={14} color="var(--accent-primary)" /> Cryptographic Decentralized Identity (DID)
-              </div>
-              <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.75rem', opacity: 0.85 }}>
-                {user?.did || 'Generating DID...'}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                <span>Wallet Address: {user?.walletAddress ? `${user.walletAddress.slice(0, 10)}...${user.walletAddress.slice(-8)}` : 'N/A'}</span>
-                <span>Role Rank: Verified Node</span>
               </div>
             </div>
 

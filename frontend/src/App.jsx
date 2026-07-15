@@ -3,6 +3,8 @@ import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/common/Navbar';
 import Login from './components/common/Login';
 import Register from './components/common/Register';
+import ForgotPasswordOTP from './components/common/ForgotPasswordOTP';
+import AcceptInvitation from './components/common/AcceptInvitation';
 import Profile from './components/common/Profile';
 import PatientDashboard from './components/patient/PatientDashboard';
 import DoctorDiscovery from './components/patient/DoctorDiscovery';
@@ -44,6 +46,8 @@ function App() {
         {/* Public */}
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />} />
+        <Route path="/forgot-password" element={<ForgotPasswordOTP />} />
+        <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
 
         {/* Dashboard (role-based) */}
         <Route path="/dashboard" element={

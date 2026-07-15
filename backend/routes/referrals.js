@@ -11,14 +11,20 @@ const router = express.Router();
  */
 router.post('/', protect, doctorOnly, async (req, res) => {
   try {
-    const { toDoctorEmail, patientEmail, reason, notes, priority } = req.body;
+    const { toDoctorEmail, toDoctorPhone, patientEmail, patientPhone, reason, notes, priority } = req.body;
 
-    const toDoctor = await User.findOne({ email: toDoctorEmail?.toLowerCase(), role: 'doctor' });
+    // Find target doctor by email or phone
+    let toDoctor = null;
+    if (toDoctorEmail) toDoctor = await User.findOne({ email: toDoctorEmail?.toLowerCase(), role: 'doctor' });
+    if (!toDoctor && toDoctorPhone) toDoctor = await User.findOne({ phone: toDoctorPhone?.trim(), role: 'doctor' });
     if (!toDoctor) {
       return res.status(404).json({ message: 'Target doctor not found' });
     }
 
-    const patient = await User.findOne({ email: patientEmail?.toLowerCase(), role: 'patient' });
+    // Find patient by email or phone
+    let patient = null;
+    if (patientEmail) patient = await User.findOne({ email: patientEmail?.toLowerCase(), role: 'patient' });
+    if (!patient && patientPhone) patient = await User.findOne({ phone: patientPhone?.trim(), role: 'patient' });
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
@@ -37,9 +43,9 @@ router.post('/', protect, doctorOnly, async (req, res) => {
     });
 
     const populated = await referral.populate([
-      { path: 'fromDoctorId', select: 'name email specialty hospital' },
-      { path: 'toDoctorId', select: 'name email specialty hospital' },
-      { path: 'patientId', select: 'name email' }
+      { path: 'fromDoctorId', select: 'name email phone specialty hospital' },
+      { path: 'toDoctorId', select: 'name email phone specialty hospital' },
+      { path: 'patientId', select: 'name email phone' }
     ]);
 
     res.status(201).json(populated);

@@ -6,7 +6,25 @@ const connectDB = require('./config/db');
 dotenv.config();
 connectDB();
 
+const http = require('http');
+const socketio = require('socket.io');
+
 const app = express();
+const server = http.createServer(app);
+const io = socketio(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+  }
+});
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log(`🔌 WebSocket client connected: ${socket.id}`);
+  socket.on('disconnect', () => {
+    console.log(`🔌 WebSocket client disconnected: ${socket.id}`);
+  });
+});
 
 app.use(cors());
 app.use(express.json());
@@ -31,8 +49,8 @@ app.get(`${prefix}/health`, (req, res) => {
 // For local development — do NOT listen on Vercel (serverless handles it)
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 5001;
-  app.listen(PORT, () => {
-    console.log(`🏥 MedZoo API running on port ${PORT}`);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🏥 MedZoo API with WebSockets running on port ${PORT} (bound to 0.0.0.0 for network access)`);
   });
 }
 

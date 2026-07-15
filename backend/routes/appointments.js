@@ -149,7 +149,13 @@ router.put('/:id/status', protect, async (req, res) => {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Doctor can confirm/cancel, Patient can cancel their own
+  const VALID_STATUSES = ['pending', 'confirmed', 'in-progress', 'critical', 'completed', 'cancelled'];
+
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status provided' });
+    }
+
+    // Doctor can set any status; Patient can only cancel their own
     const isDoctorOwner = appointment.doctorId.toString() === req.user._id.toString();
     const isPatientOwner = appointment.patientId.toString() === req.user._id.toString();
 
@@ -157,7 +163,7 @@ router.put('/:id/status', protect, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    if (isPatientOwner && status !== 'cancelled') {
+    if (isPatientOwner && !isDoctorOwner && status !== 'cancelled') {
       return res.status(403).json({ message: 'Patients can only cancel appointments' });
     }
 
@@ -230,6 +236,162 @@ router.post('/:id/rate', protect, async (req, res) => {
   } catch (error) {
     console.error('Rate appointment error:', error);
     res.status(500).json({ message: 'Server error during rating submission' });
+  }
+});
+
+/**
+ * @route   PUT /api/appointments/:id/payment
+ * @desc    Toggle payment status (doctor/staff only)
+ */
+router.put('/:id/payment', protect, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    appointment.paymentStatus = appointment.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
+    await appointment.save();
+
+    const populated = await appointment.populate([
+      { path: 'patientId', select: 'name email avatar phone' },
+      { path: 'doctorId', select: 'name specialty hospital' }
+    ]);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('appointment_update', populated);
+    }
+
+    res.json(populated);
+  } catch (error) {
+    console.error('Toggle payment error:', error);
+    res.status(500).json({ message: 'Server error during payment update' });
+  }
+});
+
+/**
+ * @route   PUT /api/appointments/:id/emergency
+ * @desc    Toggle emergency status (doctor/staff only)
+ */
+router.put('/:id/emergency', protect, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    appointment.isEmergency = !appointment.isEmergency;
+    await appointment.save();
+
+    const populated = await appointment.populate([
+      { path: 'patientId', select: 'name email avatar phone' },
+      { path: 'doctorId', select: 'name specialty hospital' }
+    ]);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('appointment_update', populated);
+      if (populated.isEmergency) {
+        io.emit('emergency_trigger', populated);
+      }
+    }
+
+    res.json(populated);
+  } catch (error) {
+    console.error('Toggle emergency error:', error);
+    res.status(500).json({ message: 'Server error during emergency status update' });
+  }
+});
+
+/**
+ * @route   PUT /api/appointments/:id/cancel-with-reason
+ * @desc    Cancel appointment with a specific reason
+ */
+router.put('/:id/cancel-with-reason', protect, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason) {
+      return res.status(400).json({ message: 'Cancellation reason is required' });
+    }
+
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    appointment.status = 'cancelled';
+    appointment.cancellationReason = reason;
+    await appointment.save();
+
+    const populated = await appointment.populate([
+      { path: 'patientId', select: 'name email avatar phone' },
+      { path: 'doctorId', select: 'name specialty hospital' }
+    ]);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('appointment_update', populated);
+    }
+
+    res.json(populated);
+  } catch (error) {
+    console.error('Cancel appointment error:', error);
+    res.status(500).json({ message: 'Server error during cancellation' });
+  }
+});
+
+/**
+ * @route   PUT /api/appointments/:id/edit
+ * @desc    Edit/Reschedule appointment details
+ */
+router.put('/:id/edit', protect, async (req, res) => {
+  try {
+    const { date, timeSlot, reason } = req.body;
+    if (!date || !timeSlot) {
+      return res.status(400).json({ message: 'Date and time slot are required' });
+    }
+
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    const bookingDate = new Date(date);
+    const nextDay = new Date(date);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    const existing = await Appointment.findOne({
+      _id: { $ne: appointment._id },
+      doctorId: appointment.doctorId,
+      date: { $gte: bookingDate, $lt: nextDay },
+      timeSlot,
+      status: { $in: ['pending', 'confirmed'] }
+    });
+
+    if (existing) {
+      return res.status(409).json({ message: 'Reschedule failed: this time slot is already booked' });
+    }
+
+    appointment.date = bookingDate;
+    appointment.timeSlot = timeSlot;
+    if (reason !== undefined) appointment.reason = reason;
+    await appointment.save();
+
+    const populated = await appointment.populate([
+      { path: 'patientId', select: 'name email avatar phone' },
+      { path: 'doctorId', select: 'name specialty hospital' }
+    ]);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('appointment_update', populated);
+    }
+
+    res.json(populated);
+  } catch (error) {
+    console.error('Reschedule appointment error:', error);
+    res.status(500).json({ message: 'Server error during rescheduling' });
   }
 });
 

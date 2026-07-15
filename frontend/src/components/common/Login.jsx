@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Phone, Lock, ArrowRight, Eye, EyeOff, AtSign } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -12,12 +12,15 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // Detect if typed value looks like phone or email
+  const isPhone = /^[0-9]/.test(identifier);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const data = await login(email, password);
+      await login(identifier, password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
@@ -43,28 +46,35 @@ export default function Login() {
           </svg>
         </div>
         <h1>Welcome Back</h1>
-        <p className="subtitle">Sign in to your MedZoo account</p>
+        <p className="subtitle">Sign in with your phone number or email</p>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Email Address</label>
+            <label>Phone Number or Email</label>
             <div className="input-icon-wrapper">
-              <Mail />
+              {isPhone ? <Phone size={18} /> : <AtSign size={18} />}
               <input
-                type="email"
+                type="text"
                 className="form-input"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="9876543210 or you@example.com"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
+                autoComplete="username"
               />
             </div>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              {isPhone ? '📱 Logging in with phone number' : '📧 Logging in with email address'}
+            </p>
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+              <label style={{ marginBottom: 0 }}>Password</label>
+              <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', textDecoration: 'none' }}>Forgot password?</Link>
+            </div>
             <div className="input-icon-wrapper">
               <Lock />
               <input
@@ -74,6 +84,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
               />
               <button
                 type="button"

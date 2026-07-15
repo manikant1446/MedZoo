@@ -12,38 +12,40 @@ const router = express.Router();
  */
 router.post('/', protect, doctorOnly, async (req, res) => {
   try {
-    const { patientEmail, patientName, diagnosis, status, category, notes, prescriptions } = req.body;
+    const { patientEmail, patientPhone, patientName, diagnosis, status, category, notes, prescriptions } = req.body;
 
-    if (!patientEmail) {
-      return res.status(400).json({ message: 'Patient email is required' });
+    if (!patientPhone) {
+      return res.status(400).json({ message: 'Patient phone number is required' });
     }
 
     const email = patientEmail.toLowerCase().trim();
 
     // Find or auto-register the patient
-    let patient = await User.findOne({ email, role: 'patient' });
+    let patient = null;
+    if (patientEmail) {
+      patient = await User.findOne({ email: patientEmail.toLowerCase().trim(), role: 'patient' });
+    }
+    if (!patient && patientPhone) {
+      patient = await User.findOne({ phone: patientPhone.trim(), role: 'patient' });
+    }
 
     if (!patient) {
-      // Auto-register new patient with a managed wallet
-      const { ethers } = require('ethers');
-      const wallet = ethers.Wallet.createRandom();
-      const name = patientName?.trim() || email.split('@')[0];
-
+      // Auto-register new patient with phone
+      const name = patientName?.trim() || (patientEmail ? patientEmail.split('@')[0] : `Patient_${patientPhone}`);
       patient = await User.create({
-        email,
-        password: 'password123', // Default password — patient can change later
+        email: patientEmail ? patientEmail.toLowerCase().trim() : undefined,
+        phone: patientPhone.trim(),
+        password: 'password123',
         name,
         role: 'patient',
-        walletAddress: wallet.address.toLowerCase(),
-        walletPrivateKey: wallet.privateKey,
-        did: `did:ethr:${wallet.address}`
       });
-      console.log(`✅ Auto-registered patient: ${name} (${email})`);
+      console.log(`✅ Auto-registered patient: ${name} (${patientPhone})`);
     }
 
     const consultation = await Consultation.create({
       patientId: patient._id,
       doctorId: req.user._id,
+      patientPhone: patientPhone.trim(),
       diagnosis,
       status: status || 'pending',
       category: category || 'General',

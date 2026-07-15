@@ -1,76 +1,96 @@
 <div align="center">
   <img src="./frontend/public/favicon.svg" alt="MedZoo Logo" width="120" />
   
-  <h1>🏥 MedZoo - Web3 Healthcare Platform</h1>
+  <h1>🏥 MedZoo - Smart Healthcare Platform</h1>
   
-  <p><strong>A decentralized, trust-based healthcare and doctor-patient collaboration platform.</strong></p>
+  <p><strong>A secure, trust-network-based healthcare platform with Node.js, Java Spring Boot, React, and React Native.</strong></p>
   <p>
     <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+    <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native" />
     <img src="https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
+    <img src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot" />
     <img src="https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
-    <img src="https://img.shields.io/badge/Solidity-e6e6e6?style=for-the-badge&logo=solidity&logoColor=black" alt="Solidity" />
-    <img src="https://img.shields.io/badge/Ethereum-3C3C3D?style=for-the-badge&logo=Ethereum&logoColor=white" alt="Ethereum" />
     <img src="https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white" alt="Chart.js" />
   </p>
 </div>
 
 <br />
 
-MedZoo leverages the immutability of blockchain technology while maintaining a seamless Web2-like experience using managed decentralized wallets. It introduces a powerful social graph-based trust system for transparent healthcare collaboration among patients, doctors, and medical specialists.
+MedZoo introduces a powerful social trust network for transparent healthcare collaboration among patients and doctors. Users register securely with their phone numbers and can find doctor recommendations based on where their synced contacts have been successfully treated.
 
 ---
 
-## ✨ Premium Features
+## ✨ Key Features
 
 ### 🧑‍⚕️ For Doctors
 | Feature | Description |
 | :--- | :--- |
-| **📊 Dynamic Analytics** | Real-time insights, patient trends, disease distributions, and peak hour tracking powered by Chart.js. |
-| **📅 Appointment Manager** | Approve, reject, or complete patient appointment requests easily with interactive cards. |
-| **📋 Consultation Tracking** | Form-based consultation creation that auto-registers new patients seamlessly on the backend. |
-| **🤝 Smart Referrals** | Refer critical cases to specialist doctors with priority tagging (Critical, High, Medium, Low). |
+| **📊 Dynamic Analytics** | Real-time insights, patient trends, disease distributions, and peak hour tracking. |
+| **📅 Appointment Manager** | Approve, reject, start, complete, or mark appointments as **Critical** (flashing border indicators). |
+| **📋 Consultation Tracking** | Form-based consultation creation requiring patient phone number that auto-registers patients. |
+| **🤝 Case Referrals** | Refer critical cases to specialist doctors with phone/email lookups and priority tagging. |
 | **📄 PDF Generation** | One-click export of patient consultation history into formatted PDF reports using `jsPDF`. |
 
 ### 👨‍👩‍👧‍👦 For Patients
 | Feature | Description |
 | :--- | :--- |
-| **🔍 Trust-Based Discovery** | Find doctors via "Contact Access" — see if your trusted social contacts have visited a doctor. |
-| **🗓️ Seamless Booking** | View dynamic 30-minute time slots (9 AM to 5 PM) to book appointments instantly. |
+| **🔍 Trust Network Recommendations** | Find trusted doctors via automatic phonebook contact sync matching. |
+| **🗓️ Seamless Booking** | View dynamic 30-minute time slots to book appointments instantly. |
 | **🩺 Medical Dashboard** | Securely view past diagnoses, consultation history, and manage upcoming appointments. |
+| **📱 React Native App** | Mobile app supporting full patient discovery, booking, and doctor panels. |
 
 ---
 
-## 🔐 Web3 Architecture & Security
+## 🚀 Quick Start (Web App)
 
-- **Managed Decentralized Identities (DID):** Ethereum wallets are automatically generated for users upon registration, removing the friction of external wallet extensions like MetaMask.
-- **Smart Contracts:** Deployed on Hardhat (Polygon Amoy compatible) for Doctor Registry, Medical Records, Referral Systems, and Reviews.
-- **Robust Auth:** JWT-based authentication via Axios interceptors, securing both frontend routing and backend API logic.
+Install dependencies and start the Node Express server + React web client:
+
+```bash
+# Start backend
+cd backend
+npm install
+npm run dev
+
+# Start frontend
+cd ../frontend
+npm install
+npm run dev
+```
 
 ---
 
-## 🚀 Quick Start
+## ☕ Java Spring Boot Backend (`/backend-java`)
+The backend is migrated to a Java Spring Boot stack connecting to MongoDB:
+- Requires **Java 17** & **Maven**.
+- Run application with: `mvn spring-boot:run` from the `backend-java` folder.
+- Configured with Spring Security stateless JWT filter.
 
-Welcome to MedZoo! We are committed to revolutionizing healthcare with secure, decentralized, and user-friendly technology.
+---
 
-You can now access MedZoo instantly at:
-
-👉 [https://medzoo.vercel.app/login](https://medzoo.vercel.app/login)
+## 📱 React Native Android App (`/MedZooApp`)
+The native mobile app is built with React Native for cross-platform availability:
+- To launch Android emulator and build:
+```bash
+cd MedZooApp
+npm install
+npx react-native run-android
+```
 
 ---
 
 ## 🧪 Demo Accounts
 
-The application automatically seeds the following accounts for immediate testing. 
+The application seeds the database with the following credentials.
 
 🔑 **Password for all accounts:** `password123`
 
-| Role | Name | Specialty | Email |
+| Role | Name | Phone Number | Email (Optional) |
 | :--- | :--- | :--- | :--- |
-| **Doctor** | Dr. Sarah Johnson | Cardiology | `doctor@medzoo.com` |
-| **Doctor** | Dr. Michael Chen | Neurology | `neurologist@medzoo.com` |
-| **Patient** | Alex Thompson | - | `patient@medzoo.com` |
-| **Patient** | Priya Sharma | - | `priya@medzoo.com` |
-| **Patient** | Rahul Verma | - | `rahul@medzoo.com` |
+| **Doctor** | Dr. Sarah Johnson | `9000000001` | `doctor@medzoo.com` |
+| **Doctor** | Dr. Michael Chen | `9000000002` | `neurologist@medzoo.com` |
+| **Patient** | Alex Thompson | `9111111001` | `patient@medzoo.com` |
+| **Patient** | Priya Sharma | `9111111002` | - |
+| **Patient** | Rahul Verma | `9111111003` | - |
 
 ---
 
@@ -78,24 +98,9 @@ The application automatically seeds the following accounts for immediate testing
 
 ```text
 MedZoo/
-├── backend/
-│   ├── config/        # Database & Seed Scripts
-│   ├── middleware/    # JWT Auth & Roles (doctorOnly, patientOnly)
-│   ├── models/        # Mongoose schemas (User, Appointment, Consultation)
-│   └── routes/        # Express REST API endpoints
-├── frontend/
-│   ├── src/
-│   │   ├── components/  # React components (split by role & common)
-│   │   ├── contexts/    # AuthContext with Axios interceptors
-│   │   └── index.css    # Custom CSS Design System (Glassmorphism, animations)
-│   └── vite.config.js
-└── blockchain/
-    ├── contracts/     # Solidity Smart Contracts (.sol)
-    └── scripts/       # Hardhat deployment scripts
+├── backend/          # Express REST API engine
+├── backend-java/     # Spring Boot Java Backend migration module
+├── MedZooApp/        # React Native Android/iOS Application
+├── frontend/         # React Web Client (Vite)
+└── api/              # Serverless Vercel function routing
 ```
-
----
-
-<div align="center">
-  <i>Built with ❤️ for a decentralized healthcare future.</i>
-</div>

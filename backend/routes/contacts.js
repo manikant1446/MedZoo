@@ -116,44 +116,77 @@ router.get('/trust-check/:doctorId', protect, async (req, res) => {
  */
 router.post('/sync', protect, async (req, res) => {
   try {
-    const { emails } = req.body;
-    if (!emails || !Array.isArray(emails)) {
-      return res.status(400).json({ message: 'Emails array is required' });
+    const { emails, contacts } = req.body;
+    let matchingUsers = [];
+
+    // Support email array sync (web app)
+    if (emails && Array.isArray(emails)) {
+      const lowercaseEmails = emails.map(email => email.toLowerCase().trim());
+      const users = await User.find({
+        email: { $in: lowercaseEmails },
+        _id: { $ne: req.user._id }
+      });
+      matchingUsers = [...matchingUsers, ...users];
     }
 
-    const lowercaseEmails = emails.map(email => email.toLowerCase().trim());
-
-    // Find users with these emails (excluding current user)
-    const matchingUsers = await User.find({
-      email: { $in: lowercaseEmails },
-      _id: { $ne: req.user._id }
-    });
+    // Support contacts object array sync (mobile app)
+    if (contacts && Array.isArray(contacts)) {
+      const phones = contacts.map(c => c.phone?.trim()).filter(Boolean);
+      const users = await User.find({
+        phone: { $in: phones },
+        _id: { $ne: req.user._id }
+      });
+      // Merge and prevent duplicates
+      const existingIds = matchingUsers.map(u => u._id.toString());
+      users.forEach(u => {
+        if (!existingIds.includes(u._id.toString())) {
+          matchingUsers.push(u);
+        }
+      });
+    }
 
     const syncedContacts = [];
+    const matchesList = [];
+
     for (const u of matchingUsers) {
-      // Check if this contact already exists for the user
       const existing = await Contact.findOne({
         userId: req.user._id,
         contactUserId: u._id
       });
 
       if (!existing) {
-        const c = await Contact.create({
+        await Contact.create({
           userId: req.user._id,
           contactUserId: u._id,
           nickname: u.name,
-          trustLevel: 3 // Default trust level
+          trustLevel: 3
         });
-        syncedContacts.push(c);
       }
+
+      // Find recommendations: where this contact has been treated
+      const treatedVisits = await Consultation.find({
+        patientId: u._id,
+        status: 'treated'
+      }).populate('doctorId', 'name');
+
+      const doctorNames = [...new Set(treatedVisits.map(v => v.doctorId?.name).filter(Boolean))];
+
+      matchesList.push({
+        name: u.name,
+        phone: u.phone,
+        email: u.email,
+        treatedAtDoctors: doctorNames
+      });
+      syncedContacts.push(u);
     }
 
-    // Update user's contacts permission status to 'granted'
+    // Update permission status to granted
     await User.findByIdAndUpdate(req.user._id, { contactsPermissionStatus: 'granted' });
 
     res.status(200).json({
       message: `Successfully synced ${syncedContacts.length} contacts`,
-      contactsCount: syncedContacts.length
+      contactsCount: syncedContacts.length,
+      matches: matchesList
     });
   } catch (error) {
     console.error('Contacts sync error:', error);

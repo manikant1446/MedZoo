@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User as UserIcon, HeartPulse, Stethoscope, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Phone, Mail, Lock, User as UserIcon, HeartPulse, Stethoscope, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Register() {
   const [form, setForm] = useState({
-    name: '', email: '', password: '', role: 'patient',
+    name: '', phone: '', password: '', role: 'patient',
     specialty: '', hospital: '', qualifications: ''
   });
   const [error, setError] = useState('');
@@ -19,6 +19,14 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    // Strict phone number check
+    const phoneRegex = /^[0-9]{10,15}$/;
+    if (!phoneRegex.test(form.phone.trim())) {
+      setError('Please enter a valid phone number containing only digits (10-15 digits).');
+      return;
+    }
+
     setLoading(true);
     try {
       await register(form);
@@ -34,7 +42,7 @@ export default function Register() {
     <div className="auth-container animate-in">
       <div className="auth-card">
         <h1>Create Account</h1>
-        <p className="subtitle">Join the decentralized healthcare platform</p>
+        <p className="subtitle">Join MedZoo — your smart healthcare companion</p>
 
         {error && <div className="error-message">{error}</div>}
 
@@ -62,12 +70,16 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Email Address</label>
+            <label>Phone Number <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
             <div className="input-icon-wrapper">
-              <Mail />
-              <input type="email" className="form-input" name="email" placeholder="you@example.com"
-                value={form.email} onChange={handleChange} required />
+              <Phone />
+              <input type="tel" className="form-input" name="phone" placeholder="9876543210"
+                value={form.phone} onChange={handleChange} required
+                pattern="[0-9+\s\-().]{7,15}" title="Enter a valid phone number" />
             </div>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              You can add your email later from Profile settings
+            </p>
           </div>
 
           <div className="form-group">

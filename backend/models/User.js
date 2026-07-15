@@ -4,8 +4,8 @@ const bcrypt = require('bcryptjs');
 const UserSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: true,
     unique: true,
+    sparse: true,
     lowercase: true,
     trim: true
   },
@@ -21,10 +21,10 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['patient', 'doctor'],
+    enum: ['patient', 'doctor', 'staff'],
     required: true
   },
-  // Managed Ethereum wallet (auto-generated on registration)
+  // Managed Ethereum wallet (auto-generated on registration) — kept for compatibility, optional
   walletAddress: {
     type: String,
     unique: true,
@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema({
   },
   walletPrivateKey: {
     type: String,
-    select: false // Never returned by default
+    select: false
   },
   // Doctor-specific fields
   specialty: {
@@ -79,7 +79,10 @@ const UserSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    default: ''
+    unique: true,
+    sparse: true,
+    trim: true,
+    default: undefined
   },
   avatar: {
     type: String,
