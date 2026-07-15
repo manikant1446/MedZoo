@@ -326,46 +326,50 @@ export default function AppointmentManager() {
                           </span>
                           
                           {/* Inline Payment Toggler badge */}
-                          <button
-                            onClick={() => togglePayment(apt._id)}
-                            style={{
-                              border: 'none',
-                              background: apt.paymentStatus === 'Paid' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.1)',
-                              color: apt.paymentStatus === 'Paid' ? '#10b981' : '#ef4444',
-                              padding: '0.15rem 0.5rem',
-                              borderRadius: 'var(--radius-full)',
-                              fontSize: '0.7rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.2rem'
-                            }}
-                          >
-                            <CreditCard size={11} />
-                            {apt.paymentStatus || 'Unpaid'}
-                          </button>
+                          {apt.status !== 'cancelled' && apt.status !== 'completed' && (
+                            <button
+                              onClick={() => togglePayment(apt._id)}
+                              style={{
+                                border: 'none',
+                                background: apt.paymentStatus === 'Paid' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.1)',
+                                color: apt.paymentStatus === 'Paid' ? '#10b981' : '#ef4444',
+                                padding: '0.15rem 0.5rem',
+                                borderRadius: 'var(--radius-full)',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.2rem'
+                              }}
+                            >
+                              <CreditCard size={11} />
+                              {apt.paymentStatus || 'Unpaid'}
+                            </button>
+                          )}
 
                           {/* Inline Emergency Control badge */}
-                          <button
-                            onClick={() => toggleEmergency(apt._id)}
-                            style={{
-                              border: 'none',
-                              background: apt.isEmergency ? 'rgba(239, 68, 68, 0.15)' : 'rgba(100, 116, 139, 0.08)',
-                              color: apt.isEmergency ? '#ef4444' : 'var(--text-muted)',
-                              padding: '0.15rem 0.5rem',
-                              borderRadius: 'var(--radius-full)',
-                              fontSize: '0.7rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.2rem'
-                            }}
-                          >
-                            <ShieldAlert size={11} />
-                            {apt.isEmergency ? 'Emergency: ON' : 'Trigger Emergency'}
-                          </button>
+                          {apt.status !== 'cancelled' && apt.status !== 'completed' && (
+                            <button
+                              onClick={() => toggleEmergency(apt._id)}
+                              style={{
+                                border: 'none',
+                                background: apt.isEmergency ? 'rgba(239, 68, 68, 0.15)' : 'rgba(100, 116, 139, 0.08)',
+                                color: apt.isEmergency ? '#ef4444' : 'var(--text-muted)',
+                                padding: '0.15rem 0.5rem',
+                                borderRadius: 'var(--radius-full)',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.2rem'
+                              }}
+                            >
+                              <ShieldAlert size={11} />
+                              {apt.isEmergency ? 'Emergency: ON' : 'Trigger Emergency'}
+                            </button>
+                          )}
                         </div>
 
                         <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>
@@ -403,60 +407,62 @@ export default function AppointmentManager() {
                       </div>
 
                       {/* Right Hand Action Buttons */}
-                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', width: '100%', marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                        {isPending && (
-                          <>
+                      {apt.status !== 'cancelled' && (
+                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', width: '100%', marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                          {isPending && (
+                            <>
+                              <button
+                                className="btn btn-sm"
+                                style={{ background: 'var(--gradient-success)', color: 'white' }}
+                                onClick={() => updateStatus(apt._id, 'confirmed')}>
+                                Approve
+                              </button>
+                              <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => updateStatus(apt._id, 'in-progress')}>
+                                Start Visit
+                              </button>
+                            </>
+                          )}
+                          {(isConfirmed || isInProgress) && (
+                            <>
+                              <button
+                                className="btn btn-sm"
+                                style={{ background: 'var(--gradient-secondary)', color: 'white' }}
+                                onClick={() => updateStatus(apt._id, 'completed')}>
+                                Mark Treated
+                              </button>
+                            </>
+                          )}
+                          {apt.status === 'completed' && (
                             <button
-                              className="btn btn-sm"
-                              style={{ background: 'var(--gradient-success)', color: 'white' }}
+                              className="btn btn-sm btn-secondary"
                               onClick={() => updateStatus(apt._id, 'confirmed')}>
-                              Approve
+                              Mark Untreated
                             </button>
-                            <button
-                              className="btn btn-sm btn-secondary"
-                              onClick={() => updateStatus(apt._id, 'in-progress')}>
-                              Start Visit
-                            </button>
-                          </>
-                        )}
-                        {(isConfirmed || isInProgress) && (
-                          <>
-                            <button
-                              className="btn btn-sm"
-                              style={{ background: 'var(--gradient-secondary)', color: 'white' }}
-                              onClick={() => updateStatus(apt._id, 'completed')}>
-                              Mark Treated
-                            </button>
-                          </>
-                        )}
-                        {apt.status === 'completed' && (
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => updateStatus(apt._id, 'confirmed')}>
-                            Mark Untreated
-                          </button>
-                        )}
-                        {apt.status !== 'completed' && apt.status !== 'cancelled' && (
-                          <>
-                            <button
-                              className="btn btn-sm btn-secondary"
-                              onClick={() => {
-                                setEditingApt(apt);
-                                setEditDate(apt.date.split('T')[0]);
-                                setEditTimeSlot(apt.timeSlot);
-                                setEditReason(apt.reason || '');
-                              }}>
-                              <Edit size={12} /> Reschedule
-                            </button>
-                            <button
-                              className="btn btn-sm btn-ghost"
-                              style={{ color: '#ef4444' }}
-                              onClick={() => setCancellingApt(apt)}>
-                              Cancel Visit
-                            </button>
-                          </>
-                        )}
-                      </div>
+                          )}
+                          {apt.status !== 'completed' && apt.status !== 'cancelled' && (
+                            <>
+                              <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => {
+                                  setEditingApt(apt);
+                                  setEditDate(apt.date.split('T')[0]);
+                                  setEditTimeSlot(apt.timeSlot);
+                                  setEditReason(apt.reason || '');
+                                }}>
+                                <Edit size={12} /> Reschedule
+                              </button>
+                              <button
+                                className="btn btn-sm btn-ghost"
+                                style={{ color: '#ef4444' }}
+                                onClick={() => setCancellingApt(apt)}>
+                                Cancel Visit
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
