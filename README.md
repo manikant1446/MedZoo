@@ -3,10 +3,9 @@
   
   <h1>🏥 MedZoo - Smart Healthcare Platform</h1>
   
-  <p><strong>A secure, trust-network-based healthcare platform with Node.js, Java Spring Boot, React, and React Native.</strong></p>
+  <p><strong>A secure, trust-network-based healthcare platform with Node.js, Java Spring Boot, and React.</strong></p>
   <p>
     <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
-    <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native" />
     <img src="https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
     <img src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot" />
     <img src="https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -17,6 +16,12 @@
 <br />
 
 MedZoo introduces a powerful social trust network for transparent healthcare collaboration among patients and doctors. Users register securely with their phone numbers and can find doctor recommendations based on where their synced contacts have been successfully treated.
+
+---
+
+## 🔗 Project Live Links
+
+- **Production Live Website**: [https://medzoo.vercel.app/login](https://medzoo.vercel.app/)
 
 ---
 
@@ -67,40 +72,12 @@ The backend is migrated to a Java Spring Boot stack connecting to MongoDB:
 
 ---
 
-## 📱 React Native Android App (`/MedZooApp`)
-The native mobile app is built with React Native for cross-platform availability:
-- To launch Android emulator and build:
-```bash
-cd MedZooApp
-npm install
-npx react-native run-android
-```
-
----
-
-## 🧪 Demo Accounts
-
-The application seeds the database with the following credentials.
-
-🔑 **Password for all accounts:** `password123`
-
-| Role | Name | Phone Number | Email (Optional) |
-| :--- | :--- | :--- | :--- |
-| **Doctor** | Dr. Sarah Johnson | `9000000001` | `doctor@medzoo.com` |
-| **Doctor** | Dr. Michael Chen | `9000000002` | `neurologist@medzoo.com` |
-| **Patient** | Alex Thompson | `9111111001` | `patient@medzoo.com` |
-| **Patient** | Priya Sharma | `9111111002` | - |
-| **Patient** | Rahul Verma | `9111111003` | - |
-
----
-
 ## 📂 Project Structure
 
 ```text
 MedZoo/
 ├── backend/          # Express REST API engine
 ├── backend-java/     # Spring Boot Java Backend migration module
-├── MedZooApp/        # React Native Android/iOS Application
 ├── frontend/         # React Web Client (Vite)
 └── api/              # Serverless Vercel function routing
 ```
