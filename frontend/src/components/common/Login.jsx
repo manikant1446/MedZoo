@@ -50,7 +50,7 @@ export default function Login() {
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
             <div className="input-icon-wrapper">
               {isPhone ? <Phone size={18} /> : <AtSign size={18} />}
               <input
@@ -65,7 +65,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+          <div className="form-group" style={{ marginBottom: '1.4rem' }}>
             <div className="input-icon-wrapper">
               <Lock />
               <input
