@@ -113,15 +113,23 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Please provide phone/email and password' });
     }
 
-    // Determine if identifier is a phone number (digits only) or email
-    const isPhone = /^[0-9+\s\-().]{7,15}$/.test(identifier.trim());
+    const cleanIdentifier = identifier.trim();
+    const digitsOnly = cleanIdentifier.replace(/[^0-9]/g, '');
+    const last10Digits = digitsOnly.slice(-10);
 
-    let user;
-    if (isPhone) {
-      user = await User.findOne({ phone: identifier.trim() });
-    } else {
-      user = await User.findOne({ email: identifier.toLowerCase().trim() });
+    const queryConditions = [
+      { email: cleanIdentifier.toLowerCase() },
+      { phone: cleanIdentifier }
+    ];
+
+    if (last10Digits.length === 10) {
+      queryConditions.push({ phone: last10Digits });
+      queryConditions.push({ phone: `+91${last10Digits}` });
+      queryConditions.push({ phone: `+91 ${last10Digits}` });
+      queryConditions.push({ phone: `91${last10Digits}` });
     }
+
+    const user = await User.findOne({ $or: queryConditions });
 
     if (!user) {
       return res.status(401).json({ message: 'No account found with this phone/email' });
@@ -160,16 +168,29 @@ router.put('/profile', protect, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const { name, avatar, address, locality, experience, hospital, email } = req.body;
+    const { name, phone, avatar, address, locality, experience, hospital, email, specialty, qualifications } = req.body;
 
     if (name) user.name = name.trim();
     if (avatar !== undefined) user.avatar = avatar;
     if (address !== undefined) user.address = address;
     if (locality !== undefined) user.locality = locality;
 
+    // Allow updating phone
+    if (phone !== undefined && phone.trim() !== '' && phone.trim() !== user.phone) {
+      const cleanPhone = phone.trim().replace(/[^0-9]/g, '').slice(-10);
+      if (cleanPhone.length !== 10) {
+        return res.status(400).json({ message: 'Phone number must be a valid 10-digit number' });
+      }
+      const existingPhone = await User.findOne({ phone: cleanPhone, _id: { $ne: user._id } });
+      if (existingPhone) {
+        return res.status(400).json({ message: 'This phone number is already registered to another user' });
+      }
+      user.phone = cleanPhone;
+    }
+
     // Allow adding/updating email from profile
     if (email !== undefined && email !== user.email) {
-      if (email) {
+      if (email && email.trim() !== '') {
         const existingEmail = await User.findOne({ email: email.toLowerCase().trim(), _id: { $ne: user._id } });
         if (existingEmail) {
           return res.status(400).json({ message: 'This email is already used by another account' });
@@ -181,14 +202,16 @@ router.put('/profile', protect, async (req, res) => {
     }
 
     if (user.role === 'doctor') {
+      if (specialty !== undefined) user.specialty = specialty.trim();
+      if (hospital !== undefined) user.hospital = hospital.trim();
+      if (qualifications !== undefined) user.qualifications = qualifications.trim();
       if (experience !== undefined) user.experience = Number(experience) || 0;
-      if (hospital !== undefined) user.hospital = hospital;
     }
 
     await user.save();
 
     const updatedUser = await User.findById(user._id).select('-password');
-    res.json(updatedUser);
+    res.json(buildUserResponse(updatedUser));
   } catch (error) {
     console.error('Update profile error:', error);
     if (error.code === 11000) {

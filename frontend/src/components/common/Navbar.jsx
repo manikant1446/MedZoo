@@ -90,7 +90,6 @@ export default function Navbar() {
             <>
               <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
               <Link to="/discover" className={location.pathname === '/discover' ? 'active' : ''}>Find Doctors</Link>
-              <Link to="/contacts" className={location.pathname === '/contacts' ? 'active' : ''}>Trust Network</Link>
             </>
           )}
           {role === 'doctor' && (

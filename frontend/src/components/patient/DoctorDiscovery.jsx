@@ -7,7 +7,6 @@ export default function DoctorDiscovery() {
   const [doctors, setDoctors] = useState([]);
   const [search, setSearch] = useState('');
   const [specialty, setSpecialty] = useState('');
-  const [trustData, setTrustData] = useState({});
   const [loading, setLoading] = useState(true);
 
   // Booking state
@@ -38,17 +37,11 @@ export default function DoctorDiscovery() {
         if (specialty) params.specialty = specialty;
         const res = await axios.get(`${API_BASE_URL}/doctors`, { params });
         setDoctors(res.data);
-
-        const trustChecks = {};
-        for (const doc of res.data) {
-          try {
-            const trustRes = await axios.get(`${API_BASE_URL}/contacts/trust-check/${doc._id}`);
-            trustChecks[doc._id] = trustRes.data;
-          } catch { trustChecks[doc._id] = { hasTrustedVisits: false, count: 0 }; }
-        }
-        setTrustData(trustChecks);
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+      } catch (err) { 
+        console.error(err); 
+      } finally { 
+        setLoading(false); 
+      }
     };
     fetchDoctors();
   }, [search, specialty]);
@@ -270,10 +263,8 @@ export default function DoctorDiscovery() {
             <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>No doctors found.</p>
           ) : (
             <div className="grid grid-3">
-              {doctors.map((doc) => {
-                const trust = trustData[doc._id];
-                return (
-                  <div key={doc._id} className="card">
+              {doctors.map((doc) => (
+                <div key={doc._id} className="card">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                       {doc.avatar ? (
                         <img src={doc.avatar} alt={doc.name} style={{
@@ -318,24 +309,13 @@ export default function DoctorDiscovery() {
                       )}
                     </div>
 
-                    {trust?.hasTrustedVisits && (
-                      <div style={{
-                        padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)',
-                        background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
-                        fontSize: '0.8rem', color: '#10b981', marginBottom: '0.75rem'
-                      }}>
-                        ✅ {trust.count} of your contacts visited this doctor
-                      </div>
-                    )}
-
                     {/* Book Appointment Button */}
                     <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
                       onClick={() => openBooking(doc)}>
                       <Calendar size={16} /> Book Appointment
                     </button>
                   </div>
-                );
-              })}
+                ))}
             </div>
           )}
         </>

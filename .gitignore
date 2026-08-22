@@ -34,3 +34,12 @@ blockchain/typechain-types/
 .gemini/
 .vercel
 .env*
+
+# Mobile & APK
+*.apk
+*.aab
+MedZoo.apk
+mobile/.expo/
+mobile/android/
+mobile/.metro-health-check*
+

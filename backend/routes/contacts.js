@@ -111,44 +111,197 @@ router.get('/trust-check/:doctorId', protect, async (req, res) => {
 });
 
 /**
+ * Helper: Normalize phone numbers (strip spaces, dashes, +91 etc.)
+ */
+const normalizePhone = (raw) => {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '');
+  if (digits.length > 10 && digits.startsWith('91')) {
+    return digits.slice(-10);
+  }
+  if (digits.length > 10 && digits.startsWith('0')) {
+    return digits.slice(-10);
+  }
+  return digits.slice(-10);
+};
+
+/**
+ * @route   GET /api/contacts/recommended-doctors
+ * @desc    Smart Recommendation Algorithm:
+ *          Find doctors who have successfully treated people in the user's phone contacts.
+ */
+router.get('/recommended-doctors', protect, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // 1. Fetch user's saved contacts
+    const contacts = await Contact.find({ userId }).populate('contactUserId', 'name phone email avatar');
+    if (!contacts || contacts.length === 0) {
+      return res.json({
+        hasContactsSynced: false,
+        totalContactsCount: 0,
+        recommendations: []
+      });
+    }
+
+    const contactMap = new Map();
+    const contactUserIds = [];
+    for (const c of contacts) {
+      if (c.contactUserId) {
+        contactUserIds.push(c.contactUserId._id);
+        contactMap.set(c.contactUserId._id.toString(), {
+          name: c.contactUserId.name,
+          phone: c.contactUserId.phone,
+          nickname: c.nickname || c.contactUserId.name,
+          trustLevel: c.trustLevel || 3
+        });
+      }
+    }
+
+    // 2. Query all consultations where these contacts were treated
+    const treatedConsultations = await Consultation.find({
+      patientId: { $in: contactUserIds },
+      status: { $in: ['treated', 'completed', 'follow-up'] }
+    })
+      .populate('doctorId', 'name email specialty hospital qualifications avatar experience address locality rating ratingsCount')
+      .sort({ date: -1 });
+
+    // 3. Group by doctor and build rich trust evidence
+    const doctorGroupMap = new Map();
+
+    for (const record of treatedConsultations) {
+      const doc = record.doctorId;
+      if (!doc) continue;
+
+      const docIdStr = doc._id.toString();
+      const patientIdStr = record.patientId.toString();
+      const contactInfo = contactMap.get(patientIdStr);
+
+      if (!doctorGroupMap.has(docIdStr)) {
+        doctorGroupMap.set(docIdStr, {
+          doctor: doc,
+          treatedContacts: [],
+          uniquePatients: new Set(),
+          categoriesTreated: new Set(),
+          latestTreatedDate: record.date
+        });
+      }
+
+      const entry = doctorGroupMap.get(docIdStr);
+      entry.uniquePatients.add(patientIdStr);
+      if (record.category) entry.categoriesTreated.add(record.category);
+
+      // Add treated contact info if not already added or add specific diagnosis
+      entry.treatedContacts.push({
+        contactName: contactInfo?.nickname || contactInfo?.name || 'Contact',
+        contactPhone: contactInfo?.phone || '',
+        category: record.category || 'General',
+        diagnosis: record.diagnosis || 'Treatment Completed',
+        date: record.date,
+        rating: record.rating || 5
+      });
+    }
+
+    // 4. Calculate Trust Score & rank doctors
+    const recommendations = [];
+    for (const [docId, entry] of doctorGroupMap.entries()) {
+      const uniqueCount = entry.uniquePatients.size;
+      const baseRating = entry.doctor.rating || 5.0;
+      // Trust score: (unique contacts treated * 10) + doctor rating
+      const trustScore = (uniqueCount * 10) + baseRating;
+
+      recommendations.push({
+        doctor: entry.doctor,
+        trustScore,
+        trustedContactsCount: uniqueCount,
+        categories: Array.from(entry.categoriesTreated),
+        latestTreatedDate: entry.latestTreatedDate,
+        treatedContacts: entry.treatedContacts.slice(0, 5) // top 5 recent treated contacts
+      });
+    }
+
+    // Sort descending by trustScore
+    recommendations.sort((a, b) => b.trustScore - a.trustScore);
+
+    res.json({
+      hasContactsSynced: true,
+      totalContactsCount: contacts.length,
+      recommendations
+    });
+  } catch (error) {
+    console.error('Recommended doctors error:', error);
+    res.status(500).json({ message: 'Error computing doctor recommendations' });
+  }
+});
+
+/**
  * @route   POST /api/contacts/sync
- * @desc    Bulk sync contact emails from device or mock data
+ * @desc    Bulk sync contacts from mobile (phone numbers) or web
  */
 router.post('/sync', protect, async (req, res) => {
   try {
-    const { emails, contacts } = req.body;
-    let matchingUsers = [];
+    const { emails, phones, contacts } = req.body;
+    let searchPhones = [];
+    let searchEmails = [];
 
-    // Support email array sync (web app)
-    if (emails && Array.isArray(emails)) {
-      const lowercaseEmails = emails.map(email => email.toLowerCase().trim());
-      const users = await User.find({
-        email: { $in: lowercaseEmails },
-        _id: { $ne: req.user._id }
-      });
-      matchingUsers = [...matchingUsers, ...users];
+    // Array of raw phones
+    if (phones && Array.isArray(phones)) {
+      searchPhones = phones.map(normalizePhone).filter(p => p.length >= 10);
     }
 
-    // Support contacts object array sync (mobile app)
+    // Array of contact objects: [{ name, phone, phoneNumbers, emails }]
     if (contacts && Array.isArray(contacts)) {
-      const phones = contacts.map(c => c.phone?.trim()).filter(Boolean);
-      const users = await User.find({
-        phone: { $in: phones },
-        _id: { $ne: req.user._id }
-      });
-      // Merge and prevent duplicates
-      const existingIds = matchingUsers.map(u => u._id.toString());
-      users.forEach(u => {
-        if (!existingIds.includes(u._id.toString())) {
-          matchingUsers.push(u);
+      for (const c of contacts) {
+        if (c.phone) {
+          const norm = normalizePhone(c.phone);
+          if (norm.length >= 10) searchPhones.push(norm);
         }
-      });
+        if (c.phoneNumbers && Array.isArray(c.phoneNumbers)) {
+          c.phoneNumbers.forEach(pn => {
+            const raw = typeof pn === 'string' ? pn : pn.number;
+            const norm = normalizePhone(raw);
+            if (norm.length >= 10) searchPhones.push(norm);
+          });
+        }
+        if (c.email) searchEmails.push(c.email.toLowerCase().trim());
+        if (c.emails && Array.isArray(c.emails)) {
+          c.emails.forEach(em => {
+            const raw = typeof em === 'string' ? em : em.email;
+            if (raw) searchEmails.push(raw.toLowerCase().trim());
+          });
+        }
+      }
+    }
+
+    // Email array fallback
+    if (emails && Array.isArray(emails)) {
+      emails.forEach(e => searchEmails.push(e.toLowerCase().trim()));
+    }
+
+    searchPhones = [...new Set(searchPhones)];
+    searchEmails = [...new Set(searchEmails)];
+
+    // Query matched users (exclude self)
+    const orConditions = [];
+    if (searchPhones.length > 0) {
+      orConditions.push({ phone: { $in: searchPhones } });
+    }
+    if (searchEmails.length > 0) {
+      orConditions.push({ email: { $in: searchEmails } });
+    }
+
+    let matchedUsers = [];
+    if (orConditions.length > 0) {
+      matchedUsers = await User.find({
+        $or: orConditions,
+        _id: { $ne: req.user._id }
+      }).select('name phone email role specialty hospital avatar');
     }
 
     const syncedContacts = [];
     const matchesList = [];
 
-    for (const u of matchingUsers) {
+    for (const u of matchedUsers) {
       const existing = await Contact.findOne({
         userId: req.user._id,
         contactUserId: u._id
@@ -163,19 +316,25 @@ router.post('/sync', protect, async (req, res) => {
         });
       }
 
-      // Find recommendations: where this contact has been treated
+      // Check where this contact has been treated
       const treatedVisits = await Consultation.find({
         patientId: u._id,
-        status: 'treated'
-      }).populate('doctorId', 'name');
+        status: { $in: ['treated', 'completed', 'follow-up'] }
+      }).populate('doctorId', 'name specialty hospital');
 
-      const doctorNames = [...new Set(treatedVisits.map(v => v.doctorId?.name).filter(Boolean))];
+      const doctorDetails = treatedVisits.map(v => ({
+        doctorId: v.doctorId?._id,
+        doctorName: v.doctorId?.name,
+        specialty: v.doctorId?.specialty,
+        category: v.category,
+        date: v.date
+      })).filter(d => d.doctorName);
 
       matchesList.push({
         name: u.name,
         phone: u.phone,
         email: u.email,
-        treatedAtDoctors: doctorNames
+        treatedRecords: doctorDetails
       });
       syncedContacts.push(u);
     }

@@ -18,7 +18,7 @@ router.post('/', protect, doctorOnly, async (req, res) => {
       return res.status(400).json({ message: 'Patient phone number is required' });
     }
 
-    const email = patientEmail.toLowerCase().trim();
+    const email = patientEmail ? patientEmail.toLowerCase().trim() : undefined;
 
     // Find or auto-register the patient
     let patient = null;

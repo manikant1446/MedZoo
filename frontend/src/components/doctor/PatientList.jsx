@@ -86,9 +86,7 @@ export default function PatientList() {
     doc.text(`Specialty: ${user?.specialty || 'General Practice'}`, 14, 48);
     doc.text(`Hospital: ${user?.hospital || 'Private Practice'}`, 14, 54);
     
-    const rawDid = user?.did || 'N/A';
-    const cleanDid = rawDid.length > 50 ? `${rawDid.slice(0, 50)}...` : rawDid;
-    doc.text(`DID: ${cleanDid}`, 14, 60);
+    doc.text(`Phone: ${user?.phone || 'N/A'}`, 14, 60);
 
     // Report Summary (Right Col)
     doc.setTextColor(31, 41, 55);

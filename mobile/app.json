@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "MedZoo",
+    "slug": "medzoo-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b0f19"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSContactsUsageDescription": "MedZoo needs access to your contacts to recommend trusted doctors who have successfully treated people in your phonebook."
+      }
+    },
+    "android": {
+      "package": "com.medzoo.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0b0f19"
+      },
+      "permissions": [
+        "android.permission.READ_CONTACTS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow MedZoo to access your contacts to discover trusted doctor recommendations."
+        }
+      ],
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}

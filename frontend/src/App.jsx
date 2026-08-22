@@ -8,7 +8,6 @@ import AcceptInvitation from './components/common/AcceptInvitation';
 import Profile from './components/common/Profile';
 import PatientDashboard from './components/patient/PatientDashboard';
 import DoctorDiscovery from './components/patient/DoctorDiscovery';
-import ContactManager from './components/patient/ContactManager';
 import DoctorDashboard from './components/doctor/DoctorDashboard';
 import PatientList from './components/doctor/PatientList';
 import ReferralManager from './components/doctor/ReferralManager';
@@ -62,9 +61,6 @@ function App() {
         {/* Patient routes */}
         <Route path="/discover" element={
           <ProtectedRoute allowedRole="patient"><DoctorDiscovery /></ProtectedRoute>
-        } />
-        <Route path="/contacts" element={
-          <ProtectedRoute allowedRole="patient"><ContactManager /></ProtectedRoute>
         } />
 
         {/* Doctor routes */}

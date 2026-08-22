@@ -25,6 +25,14 @@ const connectDB = async () => {
       const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
       console.log(`MongoDB Connected: ${conn.connection.host}`);
       await cleanUserIndexes();
+
+      // Check if database has demo data, if not seed it
+      const User = require('../models/User');
+      const userCount = await User.countDocuments();
+      if (userCount === 0) {
+        console.log('Database empty, seeding demo doctors and patients...');
+        await seedDemoData();
+      }
       return;
     } catch (err) {
       if (process.env.VERCEL === '1') {
