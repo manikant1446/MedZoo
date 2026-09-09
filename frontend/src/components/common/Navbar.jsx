@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { LogOut } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationsDropdown from './NotificationsDropdown';
 import { io } from 'socket.io-client';
 import { API_BASE_URL } from '../../config';
 
 export default function Navbar() {
-  const { user, isAuthenticated, role, logout } = useAuth();
+  const { user, isAuthenticated, role, logout, isClinicStaff, staffAssignments } = useAuth();
   const location = useLocation();
   const [emergencyAlert, setEmergencyAlert] = useState(null);
 
@@ -90,6 +91,32 @@ export default function Navbar() {
             <>
               <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
               <Link to="/discover" className={location.pathname === '/discover' ? 'active' : ''}>Find Doctors</Link>
+              {isClinicStaff && (
+                <Link
+                  to="/appointments"
+                  className={location.pathname === '/appointments' ? 'active' : ''}
+                  style={{
+                    background: location.pathname === '/appointments' ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.12)',
+                    border: '1px solid rgba(99, 102, 241, 0.35)',
+                    borderRadius: '8px',
+                    padding: '0.35rem 0.75rem',
+                    color: '#818cf8',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    marginLeft: '0.5rem'
+                  }}
+                  title="Switch to Clinic Assistant Workspace"
+                >
+                  🩺 Clinic Appointments
+                  {staffAssignments[0]?.doctor_name && (
+                    <span style={{ fontSize: '0.72rem', opacity: 0.85, fontWeight: 500 }}>
+                      ({staffAssignments[0].doctor_name.split(' ')[0]})
+                    </span>
+                  )}
+                </Link>
+              )}
             </>
           )}
           {role === 'doctor' && (
@@ -100,37 +127,47 @@ export default function Navbar() {
               <Link to="/referrals" className={location.pathname === '/referrals' ? 'active' : ''}>Referrals</Link>
             </>
           )}
+          {role === 'staff' && (
+            <>
+              <Link to="/appointments" className={location.pathname === '/appointments' || location.pathname === '/dashboard' ? 'active' : ''}>Appointments</Link>
+            </>
+          )}
         </div>
       )}
 
-      <div className="navbar-actions">
+      <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {isAuthenticated ? (
-          <div className="navbar-user" style={{ display: 'flex', alignItems: 'center' }}>
-            <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }} title="View Profile">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} style={{
-                  width: 36, height: 36, borderRadius: 'var(--radius-full)',
-                  objectFit: 'cover', border: '1.5px solid var(--accent-primary)'
-                }} />
-              ) : (
-                <div style={{
-                  width: 36, height: 36, borderRadius: 'var(--radius-full)',
-                  background: 'var(--gradient-primary)', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.85rem', fontWeight: 800, color: 'white'
-                }}>
-                  {user?.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U'}
+          <>
+            <NotificationsDropdown />
+            <div className="navbar-user" style={{ display: 'flex', alignItems: 'center' }}>
+              <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }} title="View Profile">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user.name} style={{
+                    width: 36, height: 36, borderRadius: 'var(--radius-full)',
+                    objectFit: 'cover', border: '1.5px solid var(--accent-primary)'
+                  }} />
+                ) : (
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 'var(--radius-full)',
+                    background: 'var(--gradient-primary)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.85rem', fontWeight: 800, color: 'white'
+                  }}>
+                    {user?.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U'}
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div className="user-name" style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.2 }}>{user?.name}</div>
+                  <div className="user-role" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'capitalize', margin: 0 }}>
+                    {role}{isClinicStaff && role === 'patient' ? ' • Assistant' : ''}
+                  </div>
                 </div>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div className="user-name" style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.2 }}>{user?.name}</div>
-                <div className="user-role" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'capitalize', margin: 0 }}>{role}</div>
-              </div>
-            </Link>
-            <button className="btn btn-ghost btn-sm" onClick={logout} style={{ padding: '0.25rem 0.5rem', marginLeft: '0.5rem' }}>
-              <LogOut size={16} />
-            </button>
-          </div>
+              </Link>
+              <button className="btn btn-ghost btn-sm" onClick={logout} style={{ padding: '0.25rem 0.5rem', marginLeft: '0.5rem' }}>
+                <LogOut size={16} />
+              </button>
+            </div>
+          </>
         ) : (
           !['/login', '/register', '/forgot-password'].some(p => location.pathname.startsWith(p)) && (
             <div style={{ display: 'flex', gap: '0.5rem' }}>

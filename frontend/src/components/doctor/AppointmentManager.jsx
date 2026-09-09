@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, User, RefreshCw, Filter, AlertTriangle, Activity, Search, Edit, CreditCard, ShieldAlert, Send } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Clock, CheckCircle, XCircle, User, RefreshCw, Filter, AlertTriangle, Activity, Search, Edit, CreditCard, ShieldAlert, Send, Trash2, Users, UserMinus } from 'lucide-react';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 import { API_BASE_URL } from '../../config';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function AppointmentManager() {
+  const { user, role, staffAssignments, isClinicStaff, refreshStaffAssignments } = useAuth();
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState('');
+  const [leavingClinic, setLeavingClinic] = useState(false);
   
   // Reschedule state
   const [editingApt, setEditingApt] = useState(null);
@@ -28,8 +34,89 @@ export default function AppointmentManager() {
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [pendingInvitations, setPendingInvitations] = useState([]);
 
-  useEffect(() => { fetchAppointments(); }, []);
+  useEffect(() => {
+    fetchAppointments();
+    if (role === 'doctor') {
+      fetchTeam();
+    } else {
+      refreshStaffAssignments();
+    }
+  }, [role]);
+
+  // Real-time team updates listener
+  useEffect(() => {
+    if (!user?._id) return;
+    const socketUrl = API_BASE_URL.replace('/api', '');
+    const socket = io(socketUrl);
+
+    socket.on(`team_update_${user._id}`, () => {
+      console.log('🔄 Live team update event received');
+      if (role === 'doctor') {
+        fetchTeam();
+      } else {
+        refreshStaffAssignments();
+      }
+    });
+
+    return () => socket.disconnect();
+  }, [user?._id, role]);
+
+  const fetchTeam = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/auth/team`);
+      const list = Array.isArray(res.data) ? res.data : (res.data.teamMembers || []);
+      const pending = res.data.pendingInvitations || [];
+      setTeamMembers(list);
+      setPendingInvitations(pending);
+    } catch (err) {
+      console.error('Error fetching team:', err);
+    }
+  };
+
+  const handleCancelInvitation = async (id, phone) => {
+    if (!window.confirm(`Cancel pending invitation to ${phone}?`)) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/auth/invitations/${id}`);
+      fetchTeam();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to cancel invitation');
+    }
+  };
+
+  const handleRemoveTeamMember = async (id, memberName) => {
+    if (!window.confirm(`Remove ${memberName || 'this member'} from your team? They will no longer have access to manage your appointments.`)) {
+      return;
+    }
+    try {
+      await axios.delete(`${API_BASE_URL}/auth/team/${id}`);
+      fetchTeam();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to remove member');
+    }
+  };
+
+  const handleLeaveClinic = async () => {
+    const docName = staffAssignments[0]?.doctor_name || 'the clinic doctor';
+    if (!window.confirm(`Are you sure you want to finish duties and step down from Dr. ${docName}'s clinic staff? You will no longer manage these appointments.`)) {
+      return;
+    }
+    setLeavingClinic(true);
+    try {
+      await axios.post(`${API_BASE_URL}/auth/leave-clinic`, {
+        doctorId: staffAssignments[0]?.doctor_id
+      });
+      await refreshStaffAssignments();
+      alert('You have successfully stepped down from clinic staff duties.');
+      navigate('/dashboard');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to leave clinic staff');
+    } finally {
+      setLeavingClinic(false);
+    }
+  };
 
   const fetchAppointments = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -115,10 +202,15 @@ export default function AppointmentManager() {
         phone: invitePhone,
         role: inviteRole
       });
-      const generatedLink = `${window.location.origin}/accept-invitation/${res.data.token}`;
-      setInviteLink(generatedLink);
-      setInviteSuccess('Invitation generated successfully! Share the registration link below:');
+      if (res.data.isExistingUser) {
+        setInviteSuccess(`✅ Member (${res.data.existingUserName || invitePhone}) already has a MedZoo account and has been directly added to your clinic team! They can now manage your appointments.`);
+      } else {
+        const generatedLink = `${window.location.origin}/accept-invitation/${res.data.token}`;
+        setInviteLink(generatedLink);
+        setInviteSuccess('Invitation generated successfully! Share the onboarding link below:');
+      }
       setInvitePhone('');
+      fetchTeam();
     } catch (err) {
       setInviteError(err.response?.data?.message || 'Failed to send invitation');
     } finally {
@@ -209,6 +301,54 @@ export default function AppointmentManager() {
           </button>
         </div>
       </div>
+
+      {(role === 'staff' || isClinicStaff) && role !== 'doctor' && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))',
+          border: '1px solid rgba(99, 102, 241, 0.25)',
+          borderRadius: '12px',
+          padding: '0.85rem 1.25rem',
+          marginBottom: '1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ fontSize: '1.6rem' }}>👨‍⚕️</div>
+            <div>
+              <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--accent-primary)', fontSize: '0.92rem' }}>
+                Clinic Assistant Workspace
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Logged in as <strong>{user?.name}</strong>. Handling appointments for <strong>Dr. {staffAssignments[0]?.doctor_name || 'Clinic Doctor'}</strong>.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={handleLeaveClinic}
+            disabled={leavingClinic}
+            style={{
+              borderColor: 'rgba(239, 68, 68, 0.4)',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontSize: '0.78rem',
+              padding: '0.45rem 0.85rem',
+              background: 'rgba(239, 68, 68, 0.08)'
+            }}
+            title="Finish duties and leave clinic assistant role"
+          >
+            <UserMinus size={14} />
+            {leavingClinic ? 'Leaving...' : 'Leave'}
+          </button>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.5rem', alignItems: 'start' }} className="responsive-grid">
         {/* Main Content Area */}
@@ -471,88 +611,252 @@ export default function AppointmentManager() {
           )}
         </div>
 
-        {/* Right Sidebar: Invitation Creator Widget */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            🤝 Team Invitation
-          </h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-            Invite guest doctors or medical assistants to join your clinic staff database.
-          </p>
+        {/* Right Sidebar: Invitation Creator Widget & Active Team Members */}
+        {role === 'doctor' ? (
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              🤝 Team Invitation
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+              Invite any member to handle your appointments. Existing MedZoo users are linked instantly without creating a new account.
+            </p>
 
-          {inviteError && <div className="error-message" style={{ fontSize: '0.8rem', padding: '0.5rem', marginBottom: '1rem' }}>{inviteError}</div>}
-          {inviteSuccess && <div className="success-message" style={{ fontSize: '0.8rem', padding: '0.5rem', marginBottom: '1rem', color: '#10b981', background: 'rgba(16,185,129,0.08)' }}>{inviteSuccess}</div>}
+            {inviteError && <div className="error-message" style={{ fontSize: '0.8rem', padding: '0.5rem', marginBottom: '1rem' }}>{inviteError}</div>}
+            {inviteSuccess && <div className="success-message" style={{ fontSize: '0.8rem', padding: '0.5rem', marginBottom: '1rem', color: '#10b981', background: 'rgba(16,185,129,0.08)' }}>{inviteSuccess}</div>}
 
-          {inviteLink && (
-            <div style={{ marginBottom: '1rem' }}>
-              <input
-                type="text"
-                readOnly
-                value={inviteLink}
-                onClick={(e) => { e.target.select(); document.execCommand('copy'); alert('Link copied to clipboard!'); }}
+            {inviteLink && (
+              <div style={{ marginBottom: '1rem' }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={inviteLink}
+                  onClick={(e) => { e.target.select(); document.execCommand('copy'); alert('Link copied to clipboard!'); }}
+                  style={{
+                    width: '100%',
+                    padding: '0.45rem',
+                    fontSize: '0.78rem',
+                    border: '1px solid #10b981',
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)'
+                  }}
+                />
+                <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  💡 Click on input field box to auto-copy URL.
+                </p>
+              </div>
+            )}
+
+            <form onSubmit={handleSendInvite}>
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label style={{ fontSize: '0.78rem' }}>Member Phone Number</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 9876543210"
+                  value={invitePhone}
+                  onChange={(e) => setInvitePhone(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.45rem',
+                    fontSize: '0.85rem',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)'
+                  }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.78rem' }}>Role Permission</label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.45rem',
+                    fontSize: '0.85rem',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)'
+                  }}
+                >
+                  <option value="staff">Staff / Assistant</option>
+                  <option value="doctor">Associate Doctor</option>
+                </select>
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: '0.82rem', padding: '0.5rem' }} disabled={inviteLoading}>
+                <Send size={12} /> {inviteLoading ? 'Processing...' : 'Invite Member'}
+              </button>
+            </form>
+
+            {/* Active Team Members List */}
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+              <h4 style={{ fontSize: '0.85rem', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Users size={14} /> Active Team Members ({teamMembers.length})
+              </h4>
+              {teamMembers.length === 0 ? (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                  No team members added yet. Invite someone using their phone number above.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {teamMembers.map(m => (
+                    <div key={m.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '0.6rem 0.7rem', background: 'var(--bg-secondary)',
+                      borderRadius: 'var(--radius-sm)', border: '1px solid rgba(16, 185, 129, 0.25)'
+                    }}>
+                      <div style={{ overflow: 'hidden', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</span>
+                          <span style={{
+                            fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
+                            background: 'rgba(16, 185, 129, 0.15)', color: '#10b981',
+                            padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            letterSpacing: '0.03em', whiteSpace: 'nowrap'
+                          }}>
+                            ● Active
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          📱 {m.phone} • <span style={{ textTransform: 'capitalize', color: 'var(--accent-primary)', fontWeight: 600 }}>{m.role}</span>
+                        </div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          Joined {new Date(m.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTeamMember(m.id, m.name)}
+                        title="Remove member access"
+                        style={{
+                          background: 'transparent', border: 'none', color: '#ef4444',
+                          cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center',
+                          flexShrink: 0
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pending Invitations */}
+            {pendingInvitations.length > 0 && (
+              <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+                <h4 style={{ fontSize: '0.85rem', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#f59e0b' }}>
+                  <Clock size={14} /> Pending Invitations ({pendingInvitations.length})
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {pendingInvitations.map(inv => (
+                    <div key={inv.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '0.5rem 0.7rem', background: 'rgba(245, 158, 11, 0.06)',
+                      borderRadius: 'var(--radius-sm)', border: '1px solid rgba(245, 158, 11, 0.2)'
+                    }}>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>📱 {inv.phone}</span>
+                          <span style={{
+                            fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
+                            background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b',
+                            padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            letterSpacing: '0.03em'
+                          }}>
+                            ⏳ Pending
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                          Role: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{inv.role}</span> • Sent {new Date(inv.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCancelInvitation(inv.id, inv.phone)}
+                        title="Cancel invitation"
+                        style={{
+                          background: 'transparent', border: 'none', color: '#ef4444',
+                          cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center',
+                          flexShrink: 0
+                        }}
+                      >
+                        <XCircle size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              🩺 Assistant Quick Guide
+            </h3>
+            {staffAssignments[0] && (
+              <div style={{
+                background: 'var(--bg-secondary)',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                marginBottom: '1rem',
+                fontSize: '0.8rem'
+              }}>
+                <div style={{ fontWeight: 600 }}>👨‍⚕️ Dr. {staffAssignments[0].doctor_name}</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.74rem' }}>
+                  {staffAssignments[0].specialty || 'General Practitioner'} • {staffAssignments[0].hospital || 'MedZoo Clinic'}
+                </div>
+              </div>
+            )}
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+              As clinic assistant, you can handle appointments in real time:
+            </p>
+            <ul style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', paddingLeft: '1.2rem', lineHeight: 1.7, margin: '0 0 1.25rem 0' }}>
+              <li><strong>Status:</strong> Confirm bookings or mark as completed.</li>
+              <li><strong>Reschedule:</strong> Move slots if requested or delayed.</li>
+              <li><strong>Payment:</strong> Mark visits as Paid or Unpaid.</li>
+              <li><strong>Emergency:</strong> Trigger or monitor emergency alerts.</li>
+              <li><strong>Cancel:</strong> Cancel with an audit reason.</li>
+            </ul>
+
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleLeaveClinic}
+                disabled={leavingClinic}
                 style={{
                   width: '100%',
-                  padding: '0.45rem',
-                  fontSize: '0.78rem',
-                  border: '1px solid #10b981',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                  color: 'var(--text-primary)'
+                  borderColor: 'rgba(239, 68, 68, 0.4)',
+                  color: '#ef4444',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  padding: '0.5rem',
+                  background: 'rgba(239, 68, 68, 0.08)'
                 }}
-              />
-              <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                💡 Click on input field box to auto-copy URL.
+                title="Finish duties and leave clinic assistant role"
+              >
+                <UserMinus size={15} />
+                {leavingClinic ? 'Leaving...' : 'Leave'}
+              </button>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textAlign: 'center', margin: '0.35rem 0 0 0' }}>
+                Click when your duty is complete to remove clinic access.
               </p>
             </div>
-          )}
-
-          <form onSubmit={handleSendInvite}>
-            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-              <label style={{ fontSize: '0.78rem' }}>Collaborator Phone</label>
-              <input
-                type="tel"
-                placeholder="e.g. 9876543210"
-                value={invitePhone}
-                onChange={(e) => setInvitePhone(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '0.45rem',
-                  fontSize: '0.85rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)'
-                }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label style={{ fontSize: '0.78rem' }}>Role Permission</label>
-              <select
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.45rem',
-                  fontSize: '0.85rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)'
-                }}
-              >
-                <option value="staff">Staff/Receptionist</option>
-                <option value="doctor">Associate Doctor</option>
-              </select>
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: '0.82rem', padding: '0.5rem' }} disabled={inviteLoading}>
-              <Send size={12} /> {inviteLoading ? 'Generating...' : 'Generate Invite Link'}
-            </button>
-          </form>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Edit / Reschedule Modal Overlay */}

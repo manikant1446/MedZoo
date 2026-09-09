@@ -1,10 +1,17 @@
 const express = require('express');
 const { protect } = require('../middleware/auth');
-const Contact = require('../models/Contact');
-const User = require('../models/User');
-const Consultation = require('../models/Consultation');
+const { query, getPool } = require('../config/db');
 
 const router = express.Router();
+
+/**
+ * Helper: Normalize phone numbers (strip spaces, dashes, +91 etc.)
+ */
+const normalizePhone = (raw) => {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '');
+  return digits.slice(-10);
+};
 
 /**
  * @route   GET /api/contacts
@@ -12,10 +19,34 @@ const router = express.Router();
  */
 router.get('/', protect, async (req, res) => {
   try {
-    const contacts = await Contact.find({ userId: req.user._id })
-      .populate('contactUserId', 'name email role walletAddress specialty hospital avatar');
-    res.json(contacts);
+    const contacts = await query(
+      `SELECT c.id, c.nickname, c.trust_level, c.created_at,
+              u.id AS contact_user_id, u.name, u.email, u.role,
+              u.specialty, u.hospital, u.avatar, u.wallet_address
+       FROM contacts c
+       LEFT JOIN users u ON c.contact_user_id = u.id
+       WHERE c.user_id = ?`,
+      [req.user._id]
+    );
+    res.json(contacts.map(c => ({
+      _id:           c.id,
+      userId:        req.user._id,
+      contactUserId: {
+        _id:           c.contact_user_id,
+        name:          c.name,
+        email:         c.email,
+        role:          c.role,
+        specialty:     c.specialty,
+        hospital:      c.hospital,
+        avatar:        c.avatar,
+        walletAddress: c.wallet_address,
+      },
+      nickname:   c.nickname,
+      trustLevel: c.trust_level,
+      createdAt:  c.created_at,
+    })));
   } catch (error) {
+    console.error('Get contacts error:', error);
     res.status(500).json({ message: 'Error fetching contacts' });
   }
 });
@@ -28,31 +59,44 @@ router.post('/', protect, async (req, res) => {
   try {
     const { email, nickname, trustLevel } = req.body;
 
-    const contactUser = await User.findOne({ email: email.toLowerCase() });
-    if (!contactUser) {
+    const users = await query('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
+    if (!users.length) {
       return res.status(404).json({ message: 'User not found with that email' });
     }
-    if (contactUser._id.toString() === req.user._id.toString()) {
+    const contactUser = users[0];
+
+    if (contactUser.id === req.user._id) {
       return res.status(400).json({ message: 'Cannot add yourself as a contact' });
     }
 
-    const existingContact = await Contact.findOne({
-      userId: req.user._id,
-      contactUserId: contactUser._id
-    });
-    if (existingContact) {
+    const existing = await query(
+      'SELECT id FROM contacts WHERE user_id = ? AND contact_user_id = ?',
+      [req.user._id, contactUser.id]
+    );
+    if (existing.length > 0) {
       return res.status(400).json({ message: 'Contact already exists' });
     }
 
-    const contact = await Contact.create({
-      userId: req.user._id,
-      contactUserId: contactUser._id,
-      nickname: nickname || contactUser.name,
-      trustLevel: trustLevel || 3
-    });
+    const [result] = await getPool().execute(
+      'INSERT INTO contacts (user_id, contact_user_id, nickname, trust_level) VALUES (?, ?, ?, ?)',
+      [req.user._id, contactUser.id, nickname || contactUser.name, trustLevel || 3]
+    );
 
-    const populated = await contact.populate('contactUserId', 'name email role walletAddress specialty hospital avatar');
-    res.status(201).json(populated);
+    res.status(201).json({
+      _id: result.insertId,
+      userId: req.user._id,
+      contactUserId: {
+        _id:       contactUser.id,
+        name:      contactUser.name,
+        email:     contactUser.email,
+        role:      contactUser.role,
+        specialty: contactUser.specialty,
+        hospital:  contactUser.hospital,
+        avatar:    contactUser.avatar,
+      },
+      nickname:   nickname || contactUser.name,
+      trustLevel: trustLevel || 3,
+    });
   } catch (error) {
     console.error('Add contact error:', error);
     res.status(500).json({ message: 'Error adding contact' });
@@ -65,7 +109,10 @@ router.post('/', protect, async (req, res) => {
  */
 router.delete('/:id', protect, async (req, res) => {
   try {
-    await Contact.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+    await getPool().execute(
+      'DELETE FROM contacts WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user._id]
+    );
     res.json({ message: 'Contact removed' });
   } catch (error) {
     res.status(500).json({ message: 'Error removing contact' });
@@ -74,35 +121,38 @@ router.delete('/:id', protect, async (req, res) => {
 
 /**
  * @route   GET /api/contacts/trust-check/:doctorId
- * @desc    Check if any of user's contacts have visited a specific doctor
- *          This implements the Trust-Based Discovery feature
+ * @desc    Check if any contacts visited a specific doctor
  */
 router.get('/trust-check/:doctorId', protect, async (req, res) => {
   try {
     const doctorId = req.params.doctorId;
 
-    // Get all of the user's contacts
-    const contacts = await Contact.find({ userId: req.user._id });
-    const contactUserIds = contacts.map(c => c.contactUserId);
+    // Get all contact user IDs
+    const contacts = await query(
+      'SELECT contact_user_id FROM contacts WHERE user_id = ?',
+      [req.user._id]
+    );
+    if (!contacts.length) {
+      return res.json({ hasTrustedVisits: false, count: 0, contacts: [] });
+    }
 
-    // Find consultations where those contacts were treated by this doctor
-    const trustedVisits = await Consultation.find({
-      patientId: { $in: contactUserIds },
-      doctorId: doctorId,
-      status: 'treated'
-    }).populate('patientId', 'name email');
+    const contactIds = contacts.map(c => c.contact_user_id);
+    const placeholders = contactIds.map(() => '?').join(',');
 
-    // Get the contact names who visited this doctor
-    const trustedContacts = trustedVisits.map(v => ({
-      name: v.patientId.name,
-      date: v.date,
-      category: v.category
-    }));
+    const trustedVisits = await query(
+      `SELECT c.date, c.category, u.name
+       FROM consultations c
+       LEFT JOIN users u ON c.patient_id = u.id
+       WHERE c.patient_id IN (${placeholders})
+         AND c.doctor_id = ?
+         AND c.status = 'treated'`,
+      [...contactIds, doctorId]
+    );
 
     res.json({
-      hasTrustedVisits: trustedContacts.length > 0,
-      count: trustedContacts.length,
-      contacts: trustedContacts
+      hasTrustedVisits: trustedVisits.length > 0,
+      count: trustedVisits.length,
+      contacts: trustedVisits.map(v => ({ name: v.name, date: v.date, category: v.category }))
     });
   } catch (error) {
     console.error('Trust check error:', error);
@@ -111,75 +161,68 @@ router.get('/trust-check/:doctorId', protect, async (req, res) => {
 });
 
 /**
- * Helper: Normalize phone numbers (strip spaces, dashes, +91 etc.)
- */
-const normalizePhone = (raw) => {
-  if (!raw) return '';
-  const digits = String(raw).replace(/\D/g, '');
-  if (digits.length > 10 && digits.startsWith('91')) {
-    return digits.slice(-10);
-  }
-  if (digits.length > 10 && digits.startsWith('0')) {
-    return digits.slice(-10);
-  }
-  return digits.slice(-10);
-};
-
-/**
  * @route   GET /api/contacts/recommended-doctors
- * @desc    Smart Recommendation Algorithm:
- *          Find doctors who have successfully treated people in the user's phone contacts.
+ * @desc    Find doctors trusted by the user's contacts
  */
 router.get('/recommended-doctors', protect, async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // 1. Fetch user's saved contacts
-    const contacts = await Contact.find({ userId }).populate('contactUserId', 'name phone email avatar');
-    if (!contacts || contacts.length === 0) {
-      return res.json({
-        hasContactsSynced: false,
-        totalContactsCount: 0,
-        recommendations: []
-      });
+    const contacts = await query(
+      `SELECT c.contact_user_id, c.nickname, c.trust_level,
+              u.name, u.phone, u.email, u.avatar
+       FROM contacts c
+       LEFT JOIN users u ON c.contact_user_id = u.id
+       WHERE c.user_id = ?`,
+      [userId]
+    );
+
+    if (!contacts.length) {
+      return res.json({ hasContactsSynced: false, totalContactsCount: 0, recommendations: [] });
     }
 
+    const contactIds = contacts.map(c => c.contact_user_id);
     const contactMap = new Map();
-    const contactUserIds = [];
-    for (const c of contacts) {
-      if (c.contactUserId) {
-        contactUserIds.push(c.contactUserId._id);
-        contactMap.set(c.contactUserId._id.toString(), {
-          name: c.contactUserId.name,
-          phone: c.contactUserId.phone,
-          nickname: c.nickname || c.contactUserId.name,
-          trustLevel: c.trustLevel || 3
-        });
-      }
-    }
+    contacts.forEach(c => contactMap.set(c.contact_user_id, c));
 
-    // 2. Query all consultations where these contacts were treated
-    const treatedConsultations = await Consultation.find({
-      patientId: { $in: contactUserIds },
-      status: { $in: ['treated', 'completed', 'follow-up'] }
-    })
-      .populate('doctorId', 'name email specialty hospital qualifications avatar experience address locality rating ratingsCount')
-      .sort({ date: -1 });
+    const placeholders = contactIds.map(() => '?').join(',');
 
-    // 3. Group by doctor and build rich trust evidence
+    const treatedConsultations = await query(
+      `SELECT c.patient_id, c.date, c.category, c.diagnosis, c.rating,
+              d.id AS doctor_id, d.name AS doctor_name, d.email AS doctor_email,
+              d.specialty, d.hospital, d.qualifications, d.avatar AS doctor_avatar,
+              d.experience, d.address, d.locality, d.rating AS doctor_rating,
+              d.ratings_count AS doctor_ratings_count
+       FROM consultations c
+       LEFT JOIN users d ON c.doctor_id = d.id
+       WHERE c.patient_id IN (${placeholders})
+         AND c.status IN ('treated','completed','follow-up')
+       ORDER BY c.date DESC`,
+      contactIds
+    );
+
     const doctorGroupMap = new Map();
-
     for (const record of treatedConsultations) {
-      const doc = record.doctorId;
-      if (!doc) continue;
+      const docId = record.doctor_id;
+      if (!docId) continue;
+      const contactInfo = contactMap.get(record.patient_id);
 
-      const docIdStr = doc._id.toString();
-      const patientIdStr = record.patientId.toString();
-      const contactInfo = contactMap.get(patientIdStr);
-
-      if (!doctorGroupMap.has(docIdStr)) {
-        doctorGroupMap.set(docIdStr, {
-          doctor: doc,
+      if (!doctorGroupMap.has(docId)) {
+        doctorGroupMap.set(docId, {
+          doctor: {
+            _id:            docId,
+            name:           record.doctor_name,
+            email:          record.doctor_email,
+            specialty:      record.specialty,
+            hospital:       record.hospital,
+            qualifications: record.qualifications,
+            avatar:         record.doctor_avatar,
+            experience:     record.experience,
+            address:        record.address,
+            locality:       record.locality,
+            rating:         record.doctor_rating,
+            ratingsCount:   record.doctor_ratings_count,
+          },
           treatedContacts: [],
           uniquePatients: new Set(),
           categoriesTreated: new Set(),
@@ -187,11 +230,9 @@ router.get('/recommended-doctors', protect, async (req, res) => {
         });
       }
 
-      const entry = doctorGroupMap.get(docIdStr);
-      entry.uniquePatients.add(patientIdStr);
+      const entry = doctorGroupMap.get(docId);
+      entry.uniquePatients.add(record.patient_id);
       if (record.category) entry.categoriesTreated.add(record.category);
-
-      // Add treated contact info if not already added or add specific diagnosis
       entry.treatedContacts.push({
         contactName: contactInfo?.nickname || contactInfo?.name || 'Contact',
         contactPhone: contactInfo?.phone || '',
@@ -202,32 +243,23 @@ router.get('/recommended-doctors', protect, async (req, res) => {
       });
     }
 
-    // 4. Calculate Trust Score & rank doctors
     const recommendations = [];
-    for (const [docId, entry] of doctorGroupMap.entries()) {
+    for (const [, entry] of doctorGroupMap) {
       const uniqueCount = entry.uniquePatients.size;
       const baseRating = entry.doctor.rating || 5.0;
-      // Trust score: (unique contacts treated * 10) + doctor rating
       const trustScore = (uniqueCount * 10) + baseRating;
-
       recommendations.push({
         doctor: entry.doctor,
         trustScore,
         trustedContactsCount: uniqueCount,
         categories: Array.from(entry.categoriesTreated),
         latestTreatedDate: entry.latestTreatedDate,
-        treatedContacts: entry.treatedContacts.slice(0, 5) // top 5 recent treated contacts
+        treatedContacts: entry.treatedContacts.slice(0, 5)
       });
     }
-
-    // Sort descending by trustScore
     recommendations.sort((a, b) => b.trustScore - a.trustScore);
 
-    res.json({
-      hasContactsSynced: true,
-      totalContactsCount: contacts.length,
-      recommendations
-    });
+    res.json({ hasContactsSynced: true, totalContactsCount: contacts.length, recommendations });
   } catch (error) {
     console.error('Recommended doctors error:', error);
     res.status(500).json({ message: 'Error computing doctor recommendations' });
@@ -244,36 +276,24 @@ router.post('/sync', protect, async (req, res) => {
     let searchPhones = [];
     let searchEmails = [];
 
-    // Array of raw phones
     if (phones && Array.isArray(phones)) {
       searchPhones = phones.map(normalizePhone).filter(p => p.length >= 10);
     }
-
-    // Array of contact objects: [{ name, phone, phoneNumbers, emails }]
     if (contacts && Array.isArray(contacts)) {
       for (const c of contacts) {
-        if (c.phone) {
-          const norm = normalizePhone(c.phone);
-          if (norm.length >= 10) searchPhones.push(norm);
-        }
+        if (c.phone) { const n = normalizePhone(c.phone); if (n.length >= 10) searchPhones.push(n); }
         if (c.phoneNumbers && Array.isArray(c.phoneNumbers)) {
           c.phoneNumbers.forEach(pn => {
             const raw = typeof pn === 'string' ? pn : pn.number;
-            const norm = normalizePhone(raw);
-            if (norm.length >= 10) searchPhones.push(norm);
+            const n = normalizePhone(raw); if (n.length >= 10) searchPhones.push(n);
           });
         }
         if (c.email) searchEmails.push(c.email.toLowerCase().trim());
         if (c.emails && Array.isArray(c.emails)) {
-          c.emails.forEach(em => {
-            const raw = typeof em === 'string' ? em : em.email;
-            if (raw) searchEmails.push(raw.toLowerCase().trim());
-          });
+          c.emails.forEach(em => { const raw = typeof em === 'string' ? em : em.email; if (raw) searchEmails.push(raw.toLowerCase().trim()); });
         }
       }
     }
-
-    // Email array fallback
     if (emails && Array.isArray(emails)) {
       emails.forEach(e => searchEmails.push(e.toLowerCase().trim()));
     }
@@ -281,66 +301,66 @@ router.post('/sync', protect, async (req, res) => {
     searchPhones = [...new Set(searchPhones)];
     searchEmails = [...new Set(searchEmails)];
 
-    // Query matched users (exclude self)
-    const orConditions = [];
+    // Build WHERE clause for MySQL
+    const conditions = [];
+    const vals = [];
     if (searchPhones.length > 0) {
-      orConditions.push({ phone: { $in: searchPhones } });
+      conditions.push(`phone IN (${searchPhones.map(() => '?').join(',')})`);
+      vals.push(...searchPhones);
     }
     if (searchEmails.length > 0) {
-      orConditions.push({ email: { $in: searchEmails } });
+      conditions.push(`email IN (${searchEmails.map(() => '?').join(',')})`);
+      vals.push(...searchEmails);
     }
 
     let matchedUsers = [];
-    if (orConditions.length > 0) {
-      matchedUsers = await User.find({
-        $or: orConditions,
-        _id: { $ne: req.user._id }
-      }).select('name phone email role specialty hospital avatar');
+    if (conditions.length > 0) {
+      vals.push(req.user._id);
+      matchedUsers = await query(
+        `SELECT id, name, phone, email, role, specialty, hospital, avatar
+         FROM users WHERE (${conditions.join(' OR ')}) AND id != ?`,
+        vals
+      );
     }
 
     const syncedContacts = [];
     const matchesList = [];
 
     for (const u of matchedUsers) {
-      const existing = await Contact.findOne({
-        userId: req.user._id,
-        contactUserId: u._id
-      });
-
-      if (!existing) {
-        await Contact.create({
-          userId: req.user._id,
-          contactUserId: u._id,
-          nickname: u.name,
-          trustLevel: 3
-        });
+      const existing = await query(
+        'SELECT id FROM contacts WHERE user_id = ? AND contact_user_id = ?',
+        [req.user._id, u.id]
+      );
+      if (!existing.length) {
+        await getPool().execute(
+          'INSERT INTO contacts (user_id, contact_user_id, nickname, trust_level) VALUES (?, ?, ?, 3)',
+          [req.user._id, u.id, u.name]
+        );
       }
 
-      // Check where this contact has been treated
-      const treatedVisits = await Consultation.find({
-        patientId: u._id,
-        status: { $in: ['treated', 'completed', 'follow-up'] }
-      }).populate('doctorId', 'name specialty hospital');
-
-      const doctorDetails = treatedVisits.map(v => ({
-        doctorId: v.doctorId?._id,
-        doctorName: v.doctorId?.name,
-        specialty: v.doctorId?.specialty,
-        category: v.category,
-        date: v.date
-      })).filter(d => d.doctorName);
+      const treatedVisits = await query(
+        `SELECT c.category, c.date, d.id AS doctor_id, d.name AS doctor_name, d.specialty, d.hospital
+         FROM consultations c
+         LEFT JOIN users d ON c.doctor_id = d.id
+         WHERE c.patient_id = ? AND c.status IN ('treated','completed','follow-up')`,
+        [u.id]
+      );
 
       matchesList.push({
-        name: u.name,
-        phone: u.phone,
-        email: u.email,
-        treatedRecords: doctorDetails
+        name: u.name, phone: u.phone, email: u.email,
+        treatedRecords: treatedVisits.map(v => ({
+          doctorId: v.doctor_id, doctorName: v.doctor_name, specialty: v.specialty,
+          category: v.category, date: v.date
+        })).filter(d => d.doctorName)
       });
       syncedContacts.push(u);
     }
 
-    // Update permission status to granted
-    await User.findByIdAndUpdate(req.user._id, { contactsPermissionStatus: 'granted' });
+    // Update contacts permission to granted
+    await getPool().execute(
+      "UPDATE users SET contacts_permission_status = 'granted' WHERE id = ?",
+      [req.user._id]
+    );
 
     res.status(200).json({
       message: `Successfully synced ${syncedContacts.length} contacts`,
@@ -359,7 +379,10 @@ router.post('/sync', protect, async (req, res) => {
  */
 router.post('/deny', protect, async (req, res) => {
   try {
-    await User.findByIdAndUpdate(req.user._id, { contactsPermissionStatus: 'denied' });
+    await getPool().execute(
+      "UPDATE users SET contacts_permission_status = 'denied' WHERE id = ?",
+      [req.user._id]
+    );
     res.json({ message: 'Contacts permission status updated to denied' });
   } catch (error) {
     console.error('Deny contacts permission error:', error);

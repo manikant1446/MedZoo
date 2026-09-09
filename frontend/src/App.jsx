@@ -13,17 +13,24 @@ import PatientList from './components/doctor/PatientList';
 import ReferralManager from './components/doctor/ReferralManager';
 import AppointmentManager from './components/doctor/AppointmentManager';
 
-function ProtectedRoute({ children, allowedRole }) {
-  const { isAuthenticated, role, loading } = useAuth();
+function ProtectedRoute({ children, allowedRole, allowStaffAssignment = false }) {
+  const { isAuthenticated, role, loading, isClinicStaff } = useAuth();
   if (loading) return null;
   if (!isAuthenticated) return <Navigate to="/login" />;
-  if (allowedRole && role !== allowedRole) return <Navigate to="/dashboard" />;
+  if (allowStaffAssignment && isClinicStaff) {
+    return children;
+  }
+  if (allowedRole) {
+    const roles = Array.isArray(allowedRole) ? allowedRole : [allowedRole];
+    if (!roles.includes(role)) return <Navigate to="/dashboard" />;
+  }
   return children;
 }
 
 function DashboardRouter() {
   const { role } = useAuth();
   if (role === 'doctor') return <DoctorDashboard />;
+  if (role === 'staff') return <AppointmentManager />;
   return <PatientDashboard />;
 }
 
@@ -71,7 +78,7 @@ function App() {
           <ProtectedRoute allowedRole="doctor"><ReferralManager /></ProtectedRoute>
         } />
         <Route path="/appointments" element={
-          <ProtectedRoute allowedRole="doctor"><AppointmentManager /></ProtectedRoute>
+          <ProtectedRoute allowedRole={['doctor', 'staff']} allowStaffAssignment={true}><AppointmentManager /></ProtectedRoute>
         } />
 
         {/* Default redirect */}

@@ -36,12 +36,31 @@ axios.interceptors.response.use(
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [staffAssignments, setStaffAssignments] = useState([]);
+
+  const refreshStaffAssignments = async () => {
+    try {
+      const token = localStorage.getItem('medzoo_token');
+      if (!token) {
+        setStaffAssignments([]);
+        return [];
+      }
+      const res = await axios.get(`${API_BASE_URL}/auth/staff-assignments`);
+      const list = res.data.assignments || [];
+      setStaffAssignments(list);
+      return list;
+    } catch (e) {
+      setStaffAssignments([]);
+      return [];
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('medzoo_user');
     const token = localStorage.getItem('medzoo_token');
     if (stored && token) {
       setUser(JSON.parse(stored));
+      refreshStaffAssignments();
     }
     setLoading(false);
   }, []);
@@ -52,6 +71,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('medzoo_token', data.token);
     localStorage.setItem('medzoo_user', JSON.stringify(data));
     setUser(data);
+    await refreshStaffAssignments();
     return data;
   };
 
@@ -61,6 +81,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('medzoo_token', data.token);
     localStorage.setItem('medzoo_user', JSON.stringify(data));
     setUser(data);
+    await refreshStaffAssignments();
     return data;
   };
 
@@ -68,6 +89,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('medzoo_token');
     localStorage.removeItem('medzoo_user');
     setUser(null);
+    setStaffAssignments([]);
   };
 
   const updateUser = (updatedData) => {
@@ -78,9 +100,13 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!user;
   const role = user?.role;
+  const isClinicStaff = staffAssignments.length > 0;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, isAuthenticated, role }}>
+    <AuthContext.Provider value={{
+      user, loading, login, register, logout, updateUser,
+      isAuthenticated, role, staffAssignments, isClinicStaff, refreshStaffAssignments
+    }}>
       {children}
     </AuthContext.Provider>
   );

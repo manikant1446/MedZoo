@@ -164,50 +164,34 @@ export default function PatientDashboard() {
             </Link>
           </div>
         ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Doctor</th><th>Category</th><th>Diagnosis</th>
-                  <th>Status</th><th>Date</th><th>Rating</th>
-                </tr>
-              </thead>
-              <tbody>
-                {consultations.map((c) => (
-                  <tr key={c._id}>
-                    <td style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                      {c.doctorId?.name || 'Unknown'}
-                    </td>
-                    <td><span className="badge badge-info">{c.category}</span></td>
-                    <td>{c.diagnosis || '—'}</td>
-                    <td>
-                      <span className={`badge ${
-                        c.status === 'treated' ? 'badge-success' :
-                        c.status === 'pending' ? 'badge-warning' :
-                        c.status === 'referred' ? 'badge-primary' : 'badge-info'
-                      }`}>{c.status}</span>
-                    </td>
-                    <td>{new Date(c.date).toLocaleDateString()}</td>
-                    <td>
-                      {c.rating > 0 ? (
-                        <div style={{ display: 'flex', gap: '0.1rem', color: '#fbbf24' }}>
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} size={14} fill={i < c.rating ? '#fbbf24' : 'none'} color="#fbbf24" />
-                          ))}
-                        </div>
-                      ) : ['treated', 'referred', 'follow-up'].includes(c.status) ? (
-                        <button className="btn btn-primary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                          onClick={() => { setRatingConsultation(c); setUserRating(5); setRatingError(''); }}>
-                          Rate Doctor
-                        </button>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
-                      )}
-                    </td>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Doctor</th><th>Category</th><th>Diagnosis</th>
+                    <th>Status</th><th>Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {consultations.map((c) => (
+                    <tr key={c._id}>
+                      <td style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {c.doctorId?.name || 'Unknown'}
+                      </td>
+                      <td><span className="badge badge-info">{c.category}</span></td>
+                      <td>{c.diagnosis || '—'}</td>
+                      <td>
+                        <span className={`badge ${
+                          c.status === 'treated' ? 'badge-success' :
+                          c.status === 'pending' ? 'badge-warning' :
+                          c.status === 'referred' ? 'badge-primary' : 'badge-info'
+                        }`}>{c.status}</span>
+                      </td>
+                      <td>{new Date(c.date).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
           </div>
         )}
       </div>

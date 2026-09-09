@@ -300,7 +300,7 @@ export default function DoctorDiscovery() {
                         <Star size={12} /> {doc.qualifications || 'MBBS'}
                       </span>
                       <span className="badge badge-success">
-                        ⭐ {doc.rating ? doc.rating.toFixed(1) : '5.0'} ({doc.ratingsCount || 0} reviews)
+                        ⭐ {Number(doc.rating || 5.0).toFixed(1)} ({doc.ratingsCount || 0} reviews)
                       </span>
                       {doc.experience > 0 && (
                         <span className="badge badge-warning" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
@@ -367,7 +367,7 @@ export default function DoctorDiscovery() {
                       Dr. {bookingDoctor.name} • {bookingDoctor.specialty}
                     </p>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span>⭐ {bookingDoctor.rating ? bookingDoctor.rating.toFixed(1) : '5.0'} ({bookingDoctor.ratingsCount || 0} reviews)</span>
+                      <span>⭐ {Number(bookingDoctor.rating || 5.0).toFixed(1)} ({bookingDoctor.ratingsCount || 0} reviews)</span>
                       {bookingDoctor.experience > 0 && <span>• 💼 {bookingDoctor.experience} Yrs Exp</span>}
                     </p>
                   </div>

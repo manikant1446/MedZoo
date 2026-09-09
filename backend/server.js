@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const connectDB = require('./config/db');
+const { connectDB } = require('./config/db');
 
 dotenv.config();
 connectDB();
@@ -40,6 +40,7 @@ app.use(`${prefix}/consultations`, require('./routes/consultations'));
 app.use(`${prefix}/referrals`, require('./routes/referrals'));
 app.use(`${prefix}/doctors`, require('./routes/doctors'));
 app.use(`${prefix}/appointments`, require('./routes/appointments'));
+app.use(`${prefix}/notifications`, require('./routes/notifications'));
 
 // Health check
 app.get(`${prefix}/health`, (req, res) => {
