@@ -59,7 +59,9 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ MySQL Connection Error:', error.message);
     console.error('👉 Please check: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME in your .env file');
-    process.exit(1);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
   }
 };
 
