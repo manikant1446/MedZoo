@@ -42,7 +42,6 @@ MedZoo introduces a powerful social trust network for transparent healthcare col
 | **🔍 Trust Network Recommendations** | Find trusted doctors via automatic phonebook contact sync matching. |
 | **🗓️ Seamless Booking** | View dynamic 30-minute time slots to book appointments instantly. |
 | **🩺 Medical Dashboard** | Securely view past diagnoses, consultation history, and manage upcoming appointments. |
-| **📱 React Native App** | Mobile app supporting full patient discovery, booking, and doctor panels. |
 
 ---
 
