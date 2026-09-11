@@ -19,16 +19,8 @@
       "destination": { "service": "backend" }
     },
     {
-      "source": "/assets/(.*)",
-      "destination": { "service": "frontend" }
-    },
-    {
-      "source": "/(.*\\.(?:ico|png|jpg|jpeg|svg|css|js|json|webmanifest))",
-      "destination": { "service": "frontend" }
-    },
-    {
       "source": "/(.*)",
-      "destination": { "service": "frontend", "path": "/index.html" }
+      "destination": { "service": "frontend" }
     }
   ]
 }
