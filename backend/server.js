@@ -30,22 +30,23 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-// Note: Vercel experimentalServices strips /api prefix before forwarding to backend.
-// So routes are registered WITHOUT /api prefix for Vercel compatibility.
-// Locally, frontend calls /api/* which goes directly to port 5001 (no stripping).
-const prefix = process.env.VERCEL ? '' : '/api';
-app.use(`${prefix}/auth`, require('./routes/auth'));
-app.use(`${prefix}/contacts`, require('./routes/contacts'));
-app.use(`${prefix}/consultations`, require('./routes/consultations'));
-app.use(`${prefix}/referrals`, require('./routes/referrals'));
-app.use(`${prefix}/doctors`, require('./routes/doctors'));
-app.use(`${prefix}/appointments`, require('./routes/appointments'));
-app.use(`${prefix}/notifications`, require('./routes/notifications'));
+const apiRouter = express.Router();
+apiRouter.use('/auth', require('./routes/auth'));
+apiRouter.use('/contacts', require('./routes/contacts'));
+apiRouter.use('/consultations', require('./routes/consultations'));
+apiRouter.use('/referrals', require('./routes/referrals'));
+apiRouter.use('/doctors', require('./routes/doctors'));
+apiRouter.use('/appointments', require('./routes/appointments'));
+apiRouter.use('/notifications', require('./routes/notifications'));
 
 // Health check
-app.get(`${prefix}/health`, (req, res) => {
+apiRouter.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Mount on both /api and / so it works with or without /api prefix
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 // For local development — do NOT listen on Vercel (serverless handles it)
 if (!process.env.VERCEL) {
