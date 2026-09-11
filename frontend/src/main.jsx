@@ -16,10 +16,14 @@ ChartJS.register(
   BarElement, ArcElement, Filler, Tooltip, Legend
 );
 
+import ErrorBoundary from './components/common/ErrorBoundary.jsx';
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

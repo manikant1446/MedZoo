@@ -122,9 +122,14 @@ export default function AppointmentManager() {
     if (showRefresh) setRefreshing(true);
     try {
       const res = await axios.get(`${API_BASE_URL}/appointments/doctor`);
-      setAppointments(res.data);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); setRefreshing(false); }
+      setAppointments(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   const updateStatus = async (id, status) => {
@@ -218,8 +223,11 @@ export default function AppointmentManager() {
     }
   };
 
+  // Safe appointments array fallback
+  const safeAppointments = Array.isArray(appointments) ? appointments : [];
+
   // Filter and search logic
-  const filtered = appointments.filter(a => {
+  const filtered = safeAppointments.filter(a => {
     // Status Filter mapping
     let matchesStatus = true;
     if (filter === 'pending') matchesStatus = a.status === 'pending';
@@ -232,20 +240,20 @@ export default function AppointmentManager() {
     // Search Query mapping
     const matchesSearch = searchQuery.trim() === '' || 
       a.patientId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.patientId?._id?.includes(searchQuery) ||
+      String(a.patientId?._id || '').includes(searchQuery) ||
       a.reason?.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesStatus && matchesSearch;
   });
 
   const counts = {
-    all: appointments.length,
-    pending: appointments.filter(a => a.status === 'pending').length,
-    confirmed: appointments.filter(a => a.status === 'confirmed').length,
-    'in-progress': appointments.filter(a => a.status === 'in-progress').length,
-    critical: appointments.filter(a => a.status === 'critical' || a.isEmergency).length,
-    completed: appointments.filter(a => a.status === 'completed').length,
-    cancelled: appointments.filter(a => a.status === 'cancelled').length,
+    all: safeAppointments.length,
+    pending: safeAppointments.filter(a => a.status === 'pending').length,
+    confirmed: safeAppointments.filter(a => a.status === 'confirmed').length,
+    'in-progress': safeAppointments.filter(a => a.status === 'in-progress').length,
+    critical: safeAppointments.filter(a => a.status === 'critical' || a.isEmergency).length,
+    completed: safeAppointments.filter(a => a.status === 'completed').length,
+    cancelled: safeAppointments.filter(a => a.status === 'cancelled').length,
   };
 
   const statusConfig = {
@@ -697,15 +705,15 @@ export default function AppointmentManager() {
             {/* Active Team Members List */}
             <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
               <h4 style={{ fontSize: '0.85rem', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Users size={14} /> Active Team Members ({teamMembers.length})
+                <Users size={14} /> Active Team Members ({(Array.isArray(teamMembers) ? teamMembers : []).length})
               </h4>
-              {teamMembers.length === 0 ? (
+              {(!Array.isArray(teamMembers) || teamMembers.length === 0) ? (
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
                   No team members added yet. Invite someone using their phone number above.
                 </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {teamMembers.map(m => (
+                  {(Array.isArray(teamMembers) ? teamMembers : []).map(m => (
                     <div key={m.id} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       padding: '0.6rem 0.7rem', background: 'var(--bg-secondary)',
@@ -728,7 +736,7 @@ export default function AppointmentManager() {
                           📱 {m.phone} • <span style={{ textTransform: 'capitalize', color: 'var(--accent-primary)', fontWeight: 600 }}>{m.role}</span>
                         </div>
                         <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                          Joined {new Date(m.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          Joined {m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recently'}
                         </div>
                       </div>
                       <button
@@ -750,7 +758,7 @@ export default function AppointmentManager() {
             </div>
 
             {/* Pending Invitations */}
-            {pendingInvitations.length > 0 && (
+            {Array.isArray(pendingInvitations) && pendingInvitations.length > 0 && (
               <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
                 <h4 style={{ fontSize: '0.85rem', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#f59e0b' }}>
                   <Clock size={14} /> Pending Invitations ({pendingInvitations.length})
@@ -776,7 +784,7 @@ export default function AppointmentManager() {
                           </span>
                         </div>
                         <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                          Role: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{inv.role}</span> • Sent {new Date(inv.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          Role: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{inv.role}</span> • Sent {inv.created_at ? new Date(inv.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Recently'}
                         </div>
                       </div>
                       <button

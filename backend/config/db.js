@@ -87,6 +87,7 @@ const initSchema = async () => {
       { name: 'idx_referrals_from',        table: 'referrals',     cols: '(from_doctor_id)' },
       { name: 'idx_referrals_to',          table: 'referrals',     cols: '(to_doctor_id)' },
       { name: 'idx_contacts_user',         table: 'contacts',      cols: '(user_id)' },
+      { name: 'idx_notifications_user',    table: 'notifications', cols: '(user_id, is_read, created_at)' },
     ];
 
     for (const idx of indexes) {

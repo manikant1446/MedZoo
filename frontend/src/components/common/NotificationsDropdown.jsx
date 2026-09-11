@@ -35,13 +35,16 @@ export default function NotificationsDropdown() {
     const socket = io(socketUrl);
 
     socket.on(`notification_${user._id}`, (newNotif) => {
-      setNotifications((prev) => [newNotif, ...prev.filter(n => n._id !== newNotif._id)]);
+      const nid = newNotif._id || newNotif.id;
+      setNotifications((prev) => [{ ...newNotif, _id: nid, id: nid }, ...prev.filter(n => (n._id || n.id) !== nid)]);
       setUnreadCount((prev) => prev + 1);
     });
 
     socket.on('notification_broadcast', (data) => {
       if (data.userId === user._id && data.notification) {
-        setNotifications((prev) => [data.notification, ...prev.filter(n => n._id !== data.notification._id)]);
+        const nid = data.notification._id || data.notification.id;
+        const normalized = { ...data.notification, _id: nid, id: nid };
+        setNotifications((prev) => [normalized, ...prev.filter(n => (n._id || n.id) !== nid)]);
         setUnreadCount((prev) => prev + 1);
       }
     });
@@ -55,7 +58,13 @@ export default function NotificationsDropdown() {
     try {
       setLoading(true);
       const res = await axios.get(`${API_BASE_URL}/notifications`);
-      setNotifications(res.data.notifications || []);
+      // Normalize: ensure every notification has both _id and id set
+      const normalized = (res.data.notifications || []).map(n => ({
+        ...n,
+        _id: n._id || n.id,
+        id: n.id || n._id
+      }));
+      setNotifications(normalized);
       setUnreadCount(res.data.unreadCount || 0);
     } catch (err) {
       console.error('Failed to load notifications:', err);
@@ -75,10 +84,11 @@ export default function NotificationsDropdown() {
   };
 
   const markAsRead = async (id) => {
+    if (!id) return; // Guard against undefined IDs
     try {
       await axios.put(`${API_BASE_URL}/notifications/${id}/read`);
       setNotifications((prev) =>
-        prev.map(n => (n._id === id ? { ...n, isRead: true } : n))
+        prev.map(n => ((n._id || n.id) === id ? { ...n, isRead: true } : n))
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
@@ -88,10 +98,11 @@ export default function NotificationsDropdown() {
 
   const deleteNotification = async (e, id) => {
     e.stopPropagation();
+    if (!id) return; // Guard against undefined IDs
     try {
       await axios.delete(`${API_BASE_URL}/notifications/${id}`);
-      const deleted = notifications.find(n => n._id === id);
-      setNotifications((prev) => prev.filter(n => n._id !== id));
+      const deleted = notifications.find(n => (n._id || n.id) === id);
+      setNotifications((prev) => prev.filter(n => (n._id || n.id) !== id));
       if (deleted && !deleted.isRead) {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
@@ -121,7 +132,7 @@ export default function NotificationsDropdown() {
       // Update in local state
       setNotifications((prev) =>
         prev.map(n => {
-          if (n._id === notifId) {
+          if ((n._id || n.id) === notifId) {
             return {
               ...n,
               isRead: true,
@@ -328,14 +339,15 @@ export default function NotificationsDropdown() {
                 </p>
               </div>
             ) : (
-              notifications.map((n) => {
+              notifications.map((n, index) => {
+                const nid = n._id || n.id;
                 const isInvite = n.type === 'team_invitation';
                 const inviteStatus = n.data?.status;
 
                 return (
                   <div
-                    key={n._id}
-                    onClick={() => !n.isRead && markAsRead(n._id)}
+                    key={nid || `notif-${index}`}
+                    onClick={() => !n.isRead && nid && markAsRead(nid)}
                     style={{
                       padding: '0.9rem 1.1rem',
                       borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
@@ -440,13 +452,13 @@ export default function NotificationsDropdown() {
                                   padding: '0.35rem 0.75rem',
                                   height: 'auto'
                                 }}
-                                disabled={actingId === n._id + 'accept'}
+                                disabled={actingId === nid + 'accept'}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleRespondInvitation(n._id, 'accept');
+                                  handleRespondInvitation(nid, 'accept');
                                 }}
                               >
-                                {actingId === n._id + 'accept' ? 'Accepting...' : 'Accept Invitation'}
+                                {actingId === nid + 'accept' ? 'Accepting...' : 'Accept Invitation'}
                               </button>
                               <button
                                 type="button"
@@ -457,10 +469,10 @@ export default function NotificationsDropdown() {
                                   height: 'auto',
                                   color: 'var(--text-muted)'
                                 }}
-                                disabled={actingId === n._id + 'decline'}
+                                disabled={actingId === nid + 'decline'}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleRespondInvitation(n._id, 'decline');
+                                  handleRespondInvitation(nid, 'decline');
                                 }}
                               >
                                 Decline
@@ -474,7 +486,7 @@ export default function NotificationsDropdown() {
                     {/* Delete Message Button */}
                     <button
                       type="button"
-                      onClick={(e) => deleteNotification(e, n._id)}
+                      onClick={(e) => deleteNotification(e, nid)}
                       title="Delete notification"
                       style={{
                         background: 'transparent',
