@@ -304,7 +304,7 @@ export default function DoctorDiscovery() {
                       </span>
                       {doc.experience > 0 && (
                         <span className="badge badge-warning" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
-                          💼 {doc.experience} year+
+                          💼 {doc.experience} yrs exp
                         </span>
                       )}
                     </div>
@@ -368,7 +368,7 @@ export default function DoctorDiscovery() {
                     </p>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span>⭐ {Number(bookingDoctor.rating || 5.0).toFixed(1)} ({bookingDoctor.ratingsCount || 0} reviews)</span>
-                      {bookingDoctor.experience > 0 && <span>• 💼 {bookingDoctor.experience} Year + </span>}
+                      {bookingDoctor.experience > 0 && <span>• 💼 {bookingDoctor.experience} Yrs Exp</span>}
                     </p>
                   </div>
                   <button onClick={() => setBookingDoctor(null)} style={{
