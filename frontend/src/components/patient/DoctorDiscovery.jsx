@@ -304,7 +304,7 @@ export default function DoctorDiscovery() {
                       </span>
                       {doc.experience > 0 && (
                         <span className="badge badge-warning" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
-                          💼 {doc.experience} yrs exp
+                          💼 {doc.experience} year+
                         </span>
                       )}
                     </div>
