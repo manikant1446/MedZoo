@@ -1,7 +1,8 @@
 {
   "services": {
     "frontend": {
-      "root": "frontend/"
+      "root": "frontend/",
+      "framework": "vite"
     },
     "backend": {
       "root": "backend/",
@@ -18,8 +19,16 @@
       "destination": { "service": "backend" }
     },
     {
-      "source": "/(.*)",
+      "source": "/assets/(.*)",
       "destination": { "service": "frontend" }
+    },
+    {
+      "source": "/(.*\\.(?:ico|png|jpg|jpeg|svg|css|js|json|webmanifest))",
+      "destination": { "service": "frontend" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "frontend", "path": "/index.html" }
     }
   ]
 }
