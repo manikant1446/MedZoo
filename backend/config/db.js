@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 
-// MySQL connection pool (replaces Mongoose connection)
+// MySQL connection pool
 let pool = null;
 
 /**

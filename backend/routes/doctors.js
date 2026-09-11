@@ -24,7 +24,7 @@ router.get('/', protect, async (req, res) => {
 
     let sql = `
       SELECT u.id, u.name, u.email, u.specialty, u.hospital, u.qualifications,
-             u.wallet_address AS walletAddress, u.is_verified AS isVerified, u.did,
+             u.is_verified AS isVerified,
              u.avatar, u.experience, u.address, u.locality, u.rating, u.ratings_count AS ratingsCount,
              COUNT(DISTINCT c.patient_id) AS patientCount
       FROM users u
@@ -60,7 +60,7 @@ router.get('/:id', protect, async (req, res) => {
   try {
     const rows = await query(
       `SELECT u.id, u.name, u.email, u.specialty, u.hospital, u.qualifications,
-              u.wallet_address AS walletAddress, u.is_verified AS isVerified, u.did,
+              u.is_verified AS isVerified,
               u.avatar, u.experience, u.address, u.locality, u.rating, u.ratings_count AS ratingsCount,
               COUNT(DISTINCT c.patient_id) AS patientCount
        FROM users u

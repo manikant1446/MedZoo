@@ -21,9 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   ratings_count   INT          DEFAULT 0,
   is_verified     TINYINT(1)   DEFAULT 0,
   avatar          TEXT,
-  wallet_address  VARCHAR(255) UNIQUE DEFAULT NULL,
-  wallet_private_key VARCHAR(255),
-  did             VARCHAR(255) DEFAULT '',
+
   contacts_permission_status ENUM('prompt','granted','denied') DEFAULT 'prompt',
   created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -39,7 +37,7 @@ CREATE TABLE IF NOT EXISTS consultations (
   status              ENUM('pending','treated','referred','follow-up') DEFAULT 'pending',
   category            ENUM('Cardiology','Dermatology','Neurology','Orthopedics','Pediatrics','General','Oncology','Psychiatry','Other') DEFAULT 'General',
   notes               TEXT,
-  ipfs_cid            VARCHAR(255) DEFAULT '',
+
   rating              INT        DEFAULT 0,
   consultation_hour   TINYINT    DEFAULT NULL,
   appointment_id      INT        DEFAULT NULL,

@@ -84,7 +84,7 @@ router.post('/', protect, doctorOnly, async (req, res) => {
       }
     }
 
-    // Return consultation with patient and doctor info (like Mongoose populate)
+    // Return consultation with patient and doctor info
     const populated = await getConsultationById(consultationId);
     res.status(201).json(populated);
   } catch (error) {
@@ -103,7 +103,7 @@ router.get('/doctor', protect, doctorOnly, async (req, res) => {
       `SELECT c.*,
               p.name AS patient_name, p.email AS patient_email, p.phone AS patient_user_phone,
               p.avatar AS patient_avatar, p.address AS patient_address, p.locality AS patient_locality,
-              p.wallet_address AS patient_wallet, p.did AS patient_did, p.created_at AS patient_since,
+              p.created_at AS patient_since,
               d.name AS doctor_name, d.email AS doctor_email, d.specialty AS doctor_specialty
        FROM consultations c
        LEFT JOIN users p ON c.patient_id = p.id
@@ -387,7 +387,7 @@ async function getConsultationById(id) {
     `SELECT c.*,
             p.name AS patient_name, p.email AS patient_email, p.phone AS patient_user_phone,
             p.avatar AS patient_avatar, p.address AS patient_address, p.locality AS patient_locality,
-            p.wallet_address AS patient_wallet, p.did AS patient_did, p.created_at AS patient_since,
+            p.created_at AS patient_since,
             d.name AS doctor_name, d.email AS doctor_email, d.specialty AS doctor_specialty,
             d.rating AS doctor_rating, d.ratings_count AS doctor_ratings_count
      FROM consultations c
@@ -401,7 +401,7 @@ async function getConsultationById(id) {
   return formatConsultation({ ...rows[0], prescriptions });
 }
 
-/** Shape MySQL row to match the Mongoose-populated shape the frontend expects */
+/** Shape MySQL row to match the structured format the frontend expects */
 function formatConsultation(row) {
   return {
     _id:           row.id,
@@ -413,8 +413,7 @@ function formatConsultation(row) {
       avatar:        row.patient_avatar,
       address:       row.patient_address,
       locality:      row.patient_locality,
-      walletAddress: row.patient_wallet,
-      did:           row.patient_did,
+
       createdAt:     row.patient_since,
     },
     doctorId: {
@@ -439,7 +438,7 @@ function formatConsultation(row) {
     notes:             row.notes,
     appointmentId:     row.appointment_id,
     referralId:        row.referral_id,
-    ipfsCid:           row.ipfs_cid,
+
     rating:            row.rating,
     consultationHour:  row.consultation_hour,
     prescriptions:     row.prescriptions || [],

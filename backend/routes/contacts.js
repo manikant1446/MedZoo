@@ -22,7 +22,7 @@ router.get('/', protect, async (req, res) => {
     const contacts = await query(
       `SELECT c.id, c.nickname, c.trust_level, c.created_at,
               u.id AS contact_user_id, u.name, u.email, u.role,
-              u.specialty, u.hospital, u.avatar, u.wallet_address
+              u.specialty, u.hospital, u.avatar
        FROM contacts c
        LEFT JOIN users u ON c.contact_user_id = u.id
        WHERE c.user_id = ?`,
@@ -39,7 +39,7 @@ router.get('/', protect, async (req, res) => {
         specialty:     c.specialty,
         hospital:      c.hospital,
         avatar:        c.avatar,
-        walletAddress: c.wallet_address,
+
       },
       nickname:   c.nickname,
       trustLevel: c.trust_level,
