@@ -25,6 +25,7 @@
 
 <br />
 
+## 💡 Overview
 MedZoo is a full-stack healthcare platform built around a **social trust network** model. Instead of blindly choosing doctors from a directory, patients discover trusted doctors through their existing contacts — people they already know and trust who were successfully treated. This creates a decentralized recommendation engine powered by real relationships.
 
 The platform serves three distinct user roles — **Patients**, **Doctors**, and **Clinic Staff** — each with tailored dashboards, workflows, and permissions.
