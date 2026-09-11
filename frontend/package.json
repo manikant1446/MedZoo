@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node -e \"require('fs').copyFileSync('dist/index.html', 'dist/404.html')\"",
+    "build": "vite build && node -e \"const fs=require('fs');['login','register','dashboard','appointments','consultations','profile','discover','forgot-password','patients','referrals'].forEach(r=>{fs.mkdirSync('dist/'+r,{recursive:true});fs.copyFileSync('dist/index.html','dist/'+r+'/index.html');});try{fs.copyFileSync('dist/index.html','dist/404.html')}catch(e){}\"",
     "lint": "eslint .",
     "preview": "vite preview"
   },
