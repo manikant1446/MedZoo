@@ -31,14 +31,19 @@ const connectDB = async () => {
   try {
     // Create pool
     pool = mysql.createPool({
-      host:     process.env.DB_HOST     || 'localhost',
-      port:     process.env.DB_PORT     || 3306,
-      user:     process.env.DB_USER     || 'root',
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME     || 'medzoo',
+      database: process.env.DB_NAME || 'medzoo',
+
+      ssl: {
+        rejectUnauthorized: false
+      },
+
       waitForConnections: true,
       connectionLimit: 10,
-      multipleStatements: true  // needed to run schema.sql
+      multipleStatements: true
     });
 
     // Test connection
@@ -73,21 +78,25 @@ const initSchema = async () => {
     const schemaPath = path.join(__dirname, 'schema.sql');
     let schemaSql = fs.readFileSync(schemaPath, 'utf-8');
 
-    // Remove standalone CREATE INDEX lines (we handle them separately below)
-    schemaSql = schemaSql.replace(/^CREATE INDEX .+;$/gm, '').trim();
+    // Strip CREATE DATABASE and USE statements so it uses the connected database (e.g. defaultdb on Aiven)
+    schemaSql = schemaSql
+      .replace(/^CREATE DATABASE.+;$/gim, '')
+      .replace(/^USE .+;$/gim, '')
+      .replace(/^CREATE INDEX .+;$/gm, '')
+      .trim();
 
     await getPool().query(schemaSql);
 
     // Create indexes only if they don't exist already
     const indexes = [
-      { name: 'idx_consultations_doctor',  table: 'consultations', cols: '(doctor_id)' },
+      { name: 'idx_consultations_doctor', table: 'consultations', cols: '(doctor_id)' },
       { name: 'idx_consultations_patient', table: 'consultations', cols: '(patient_id)' },
-      { name: 'idx_consultations_status',  table: 'consultations', cols: '(doctor_id, status)' },
-      { name: 'idx_consultations_date',    table: 'consultations', cols: '(doctor_id, date)' },
-      { name: 'idx_referrals_from',        table: 'referrals',     cols: '(from_doctor_id)' },
-      { name: 'idx_referrals_to',          table: 'referrals',     cols: '(to_doctor_id)' },
-      { name: 'idx_contacts_user',         table: 'contacts',      cols: '(user_id)' },
-      { name: 'idx_notifications_user',    table: 'notifications', cols: '(user_id, is_read, created_at)' },
+      { name: 'idx_consultations_status', table: 'consultations', cols: '(doctor_id, status)' },
+      { name: 'idx_consultations_date', table: 'consultations', cols: '(doctor_id, date)' },
+      { name: 'idx_referrals_from', table: 'referrals', cols: '(from_doctor_id)' },
+      { name: 'idx_referrals_to', table: 'referrals', cols: '(to_doctor_id)' },
+      { name: 'idx_contacts_user', table: 'contacts', cols: '(user_id)' },
+      { name: 'idx_notifications_user', table: 'notifications', cols: '(user_id, is_read, created_at)' },
     ];
 
     for (const idx of indexes) {
@@ -217,12 +226,12 @@ const seedDemoData = async () => {
   const patientId3 = p3Result.insertId;
 
   // Create 35 demo consultations
-  const patients   = [patientId1, patientId2, patientId3];
-  const phones     = ['9111111001', '9111111002', '9111111003'];
-  const doctors    = [doctorId1, doctorId2];
+  const patients = [patientId1, patientId2, patientId3];
+  const phones = ['9111111001', '9111111002', '9111111003'];
+  const doctors = [doctorId1, doctorId2];
   const categories = ['Cardiology', 'General', 'Neurology', 'Dermatology', 'Orthopedics'];
-  const statuses   = ['treated', 'treated', 'treated', 'pending', 'follow-up'];
-  const diagnoses  = [
+  const statuses = ['treated', 'treated', 'treated', 'pending', 'follow-up'];
+  const diagnoses = [
     'Mild hypertension', 'Routine checkup', 'Tension headache',
     'Skin rash evaluation', 'Joint pain assessment'
   ];
