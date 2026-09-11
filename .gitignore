@@ -5,40 +5,24 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env*
 
 # Build output
 dist/
 build/
 
-# IDE
+# Logs
+*.log
+npm-debug.log*
+
+# System & IDE
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-
-# Blockchain
-blockchain/artifacts/
-blockchain/cache/
-blockchain/typechain-types/
-
-# Misc
-.gemini/
+# Tooling & Cloud
 .vercel
-.env*
-
-# Mobile & APK
-*.apk
-*.aab
-MedZoo.apk
-mobile/.expo/
-mobile/android/
-mobile/.metro-health-check*
-
+.gemini/
