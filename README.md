@@ -25,26 +25,6 @@
 
 <br />
 
-## 📋 Table of Contents
-
-- [Overview](#-overview)
-- [Live Demo](#-live-demo)
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-- [Environment Variables](#-environment-variables)
-- [API Reference](#-api-reference)
-- [Database Schema](#-database-schema)
-- [Deployment](#-deployment)
-- [Contributing](#-contributing)
-- [License](#-license)
-
----
-
-## 🔭 Overview
-
 MedZoo is a full-stack healthcare platform built around a **social trust network** model. Instead of blindly choosing doctors from a directory, patients discover trusted doctors through their existing contacts — people they already know and trust who were successfully treated. This creates a decentralized recommendation engine powered by real relationships.
 
 The platform serves three distinct user roles — **Patients**, **Doctors**, and **Clinic Staff** — each with tailored dashboards, workflows, and permissions.
@@ -222,9 +202,6 @@ MedZoo/
 │   ├── utils/
 │   │   └── notify.js                  # WebSocket notification helper
 │   └── package.json
-│
-├── api/
-│   └── index.js                       # Vercel serverless function proxy
 │
 ├── vercel.json                        # Vercel services + rewrite rules
 ├── package.json                       # Root workspace config
