@@ -368,7 +368,7 @@ export default function DoctorDiscovery() {
                     </p>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span>⭐ {Number(bookingDoctor.rating || 5.0).toFixed(1)} ({bookingDoctor.ratingsCount || 0} reviews)</span>
-                      {bookingDoctor.experience > 0 && <span>• 💼 {bookingDoctor.experience} Yrs Exp</span>}
+                      {bookingDoctor.experience > 0 && <span>• 💼 {bookingDoctor.experience} Year + </span>}
                     </p>
                   </div>
                   <button onClick={() => setBookingDoctor(null)} style={{
