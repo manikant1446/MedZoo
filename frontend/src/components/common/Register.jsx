@@ -32,7 +32,7 @@ export default function Register() {
     const cleanEmail = form.email.trim().toLowerCase();
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(cleanEmail)) {
-      setError('Please enter a valid Gmail / Email address.');
+      setError('Please enter a valid Email address.');
       return;
     }
 

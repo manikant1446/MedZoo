@@ -67,7 +67,7 @@ router.post('/register', async (req, res) => {
     const cleanEmail = email.toLowerCase().trim();
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(cleanEmail)) {
-      return res.status(400).json({ message: 'Please enter a valid Gmail / Email address' });
+      return res.status(400).json({ message: 'Please enter a valid Email address' });
     }
 
     if (!['patient', 'doctor'].includes(role)) {
@@ -91,7 +91,7 @@ router.post('/register', async (req, res) => {
     // Check if email already registered
     const existingByEmail = await query('SELECT id FROM users WHERE email = ?', [cleanEmail]);
     if (existingByEmail.length > 0) {
-      return res.status(400).json({ message: 'An account already exists with this Gmail / email address' });
+      return res.status(400).json({ message: 'An account already exists with this Email address' });
     }
 
     // Hash password
