@@ -1,5 +1,4 @@
 -- MedZoo MySQL Database Schema
--- Run this once: mysql -u manikant1446 -p medzoo < schema.sql
 
 CREATE DATABASE IF NOT EXISTS medzoo;
 USE medzoo;
