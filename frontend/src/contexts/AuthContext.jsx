@@ -18,15 +18,22 @@ axios.interceptors.request.use((config) => {
 });
 
 // Axios interceptor: handle 401 responses globally (auto-logout)
+// IMPORTANT: background/non-critical endpoints should use native fetch to avoid triggering this
+const SKIP_LOGOUT_URLS = ['/auth/staff-assignments', '/auth/me'];
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('medzoo_token');
-      localStorage.removeItem('medzoo_user');
-      // Only redirect if not already on login/register
-      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-        window.location.href = '/login';
+      // Don't logout for background sync endpoints
+      const url = error.config?.url || '';
+      const isBackgroundSync = SKIP_LOGOUT_URLS.some(skip => url.includes(skip));
+      if (!isBackgroundSync) {
+        localStorage.removeItem('medzoo_token');
+        localStorage.removeItem('medzoo_user');
+        // Only redirect if not already on login/register
+        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
