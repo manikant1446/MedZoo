@@ -19,7 +19,7 @@ ChartJS.register(
 import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1048684728518-medzooclientid.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '483401041649-bvrcu49tc1i9n4dhr1dq92pskv5g5o3e.apps.googleusercontent.com';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
