@@ -214,7 +214,9 @@ export default function Profile() {
     { id: 'home', label: 'Home', icon: Home, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
     { id: 'personal', label: 'Personal info', icon: User, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
     { id: 'security', label: 'Security & sign-in', icon: ShieldCheck, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
-    { id: 'role', label: user?.role === 'doctor' ? 'Clinic & Medical' : 'Health & Account', icon: Stethoscope, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }
+    ...(user?.role === 'doctor'
+      ? [{ id: 'role', label: 'Doctor Profile', icon: Stethoscope, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }]
+      : [])
   ];
 
   return (
@@ -376,80 +378,6 @@ export default function Profile() {
           {activeTab === 'home' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               
-              {/* Quick Action Chips (Google Account Style) */}
-              <div style={{
-                display: 'flex',
-                gap: '0.5rem',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                marginBottom: '0.5rem'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('security')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ borderRadius: 'var(--radius-full)', gap: '0.4rem', fontSize: '0.82rem' }}
-                >
-                  <Key size={14} color="#06b6d4" /> Change Password
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('personal')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ borderRadius: 'var(--radius-full)', gap: '0.4rem', fontSize: '0.82rem' }}
-                >
-                  <Phone size={14} color="#10b981" /> Update Phone
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('personal')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ borderRadius: 'var(--radius-full)', gap: '0.4rem', fontSize: '0.82rem' }}
-                >
-                  <Camera size={14} color="#3b82f6" /> Profile Photo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('role')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ borderRadius: 'var(--radius-full)', gap: '0.4rem', fontSize: '0.82rem' }}
-                >
-                  <Stethoscope size={14} color="#f59e0b" /> Medical Details
-                </button>
-              </div>
-
-              {/* Security Status Card */}
-              <div className="card" style={{
-                border: '1px solid rgba(6, 182, 212, 0.3)',
-                background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.05), rgba(17, 24, 39, 0.6))',
-                cursor: 'pointer'
-              }}
-              onClick={() => setActiveTab('security')}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{
-                      width: '42px', height: '42px', borderRadius: '50%',
-                      background: 'rgba(6, 182, 212, 0.15)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', color: '#06b6d4',
-                      flexShrink: 0
-                    }}>
-                      <ShieldCheck size={22} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
-                        Security &amp; Password Protection
-                      </h3>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem 0' }}>
-                        Your medical account is protected. You can update your password or check linked Google sign-in.
-                      </p>
-                      <span style={{ fontSize: '0.8rem', color: '#06b6d4', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                        Manage security settings <ChevronRight size={14} />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Personal Info Summary Card */}
               <div className="card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('personal')}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -486,9 +414,9 @@ export default function Profile() {
                     <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{user?.name || 'Not provided'}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phone (Editable)</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phone</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 600, color: user?.phone ? 'var(--text-primary)' : 'var(--accent-warning)' }}>
-                      {user?.phone ? `+91 ${user.phone}` : 'Not added yet'}
+                      {user?.phone ? user.phone : 'Not added yet'}
                     </div>
                   </div>
                   <div>
@@ -502,62 +430,54 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Role / Healthcare Summary Card */}
-              <div className="card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('role')}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{
-                      width: '42px', height: '42px', borderRadius: '50%',
-                      background: 'rgba(245, 158, 11, 0.15)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', color: '#f59e0b',
-                      flexShrink: 0
-                    }}>
-                      <Stethoscope size={22} />
+              {/* Doctor Details Summary Card (Only if Doctor) */}
+              {user?.role === 'doctor' && (
+                <div className="card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('role')}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{
+                        width: '42px', height: '42px', borderRadius: '50%',
+                        background: 'rgba(245, 158, 11, 0.15)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', color: '#f59e0b',
+                        flexShrink: 0
+                      }}>
+                        <Stethoscope size={22} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
+                          Clinic & Specialization
+                        </h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                          Manage your hospital affiliation, qualifications, and experience.
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} color="var(--text-muted)" />
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    gap: '1.5rem',
+                    flexWrap: 'wrap',
+                    paddingTop: '0.75rem',
+                    borderTop: '1px solid var(--border)',
+                    fontSize: '0.85rem'
+                  }}>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Specialty: </span>
+                      <strong>{user?.specialty || 'General'}</strong>
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
-                        {user?.role === 'doctor' ? 'Clinic & Specialization' : 'Patient Healthcare Summary'}
-                      </h3>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                        {user?.role === 'doctor'
-                          ? 'Manage your hospital affiliation, qualifications, and patient care details.'
-                          : 'View your patient profile and medical appointment records.'}
-                      </p>
+                      <span style={{ color: 'var(--text-muted)' }}>Hospital: </span>
+                      <strong>{user?.hospital || 'Private Clinic'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Experience: </span>
+                      <strong>{user?.experience || 0} years</strong>
                     </div>
                   </div>
-                  <ChevronRight size={18} color="var(--text-muted)" />
                 </div>
-
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px solid var(--border)',
-                  fontSize: '0.85rem'
-                }}>
-                  {user?.role === 'doctor' ? (
-                    <>
-                      <div>
-                        <span style={{ color: 'var(--text-muted)' }}>Specialty: </span>
-                        <strong>{user?.specialty || 'General'}</strong>
-                      </div>
-                      <div>
-                        <span style={{ color: 'var(--text-muted)' }}>Hospital: </span>
-                        <strong>{user?.hospital || 'Private Clinic'}</strong>
-                      </div>
-                      <div>
-                        <span style={{ color: 'var(--text-muted)' }}>Experience: </span>
-                        <strong>{user?.experience || 0} years</strong>
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      <span style={{ color: 'var(--text-muted)' }}>Platform Role: </span>
-                      <strong>Registered Patient</strong>
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
 
             </div>
           )}
@@ -1046,145 +966,87 @@ export default function Profile() {
             </div>
           )}
 
-          {/* TAB 4: CLINIC & MEDICAL ROLE DETAILS */}
-          {activeTab === 'role' && (
+          {/* TAB 4: CLINIC & MEDICAL ROLE DETAILS (Doctors only) */}
+          {activeTab === 'role' && user?.role === 'doctor' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              
-              {user?.role === 'doctor' ? (
-                <div className="card">
-                  <form onSubmit={handleSaveProfile}>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-                      Doctor Professional Profile
-                    </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                      Patients see these details when discovering specialists and booking clinic appointments.
-                    </p>
+              <div className="card">
+                <form onSubmit={handleSaveProfile}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.25rem' }}>
+                    Doctor Professional Profile
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                    Patients see these details when discovering specialists and booking clinic appointments.
+                  </p>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div className="grid grid-2">
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                            <Award size={14} /> Medical Specialty
-                          </label>
-                          <input
-                            type="text"
-                            name="specialty"
-                            className="form-input"
-                            value={form.specialty}
-                            onChange={handleChange}
-                            placeholder="e.g. Cardiologist, Neurologist, General"
-                          />
-                        </div>
-
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                            <Award size={14} /> Qualifications
-                          </label>
-                          <input
-                            type="text"
-                            name="qualifications"
-                            className="form-input"
-                            value={form.qualifications}
-                            onChange={handleChange}
-                            placeholder="e.g. MBBS, MD, MS"
-                          />
-                        </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div className="grid grid-2">
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                          <Award size={14} /> Medical Specialty
+                        </label>
+                        <input
+                          type="text"
+                          name="specialty"
+                          className="form-input"
+                          value={form.specialty}
+                          onChange={handleChange}
+                          placeholder="e.g. Cardiologist, Neurologist, General"
+                        />
                       </div>
 
-                      <div className="grid grid-2">
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                            <Building size={14} /> Hospital / Clinic Affiliation
-                          </label>
-                          <input
-                            type="text"
-                            name="hospital"
-                            className="form-input"
-                            value={form.hospital}
-                            onChange={handleChange}
-                            placeholder="e.g. Apollo Hospital / City Care Clinic"
-                          />
-                        </div>
-
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                            <Star size={14} /> Clinical Experience (Years)
-                          </label>
-                          <input
-                            type="number"
-                            name="experience"
-                            min="0"
-                            className="form-input"
-                            value={form.experience}
-                            onChange={handleChange}
-                          />
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <button type="submit" className="btn btn-primary" disabled={saving}>
-                          {saving ? 'Saving...' : 'Update Doctor Info'}
-                        </button>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                          <Award size={14} /> Qualifications
+                        </label>
+                        <input
+                          type="text"
+                          name="qualifications"
+                          className="form-input"
+                          value={form.qualifications}
+                          onChange={handleChange}
+                          placeholder="e.g. MBBS, MD, MS"
+                        />
                       </div>
                     </div>
-                  </form>
-                </div>
-              ) : (
-                <div className="card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                    <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%',
-                      background: 'rgba(99, 102, 241, 0.15)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)'
-                    }}>
-                      <User size={20} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>
-                        Patient Healthcare Account
-                      </h3>
-                      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-                        Access your health records, doctor referrals, and schedule appointments.
-                      </p>
-                    </div>
-                  </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
-                    <div style={{
-                      padding: '1rem', borderRadius: 'var(--radius-md)',
-                      background: 'var(--bg-hover)', border: '1px solid var(--border)'
-                    }}>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Specialist Directory</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Find Verified Doctors</div>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/discover')}
-                        className="btn btn-secondary btn-sm"
-                        style={{ width: '100%', justifyContent: 'center', gap: '0.35rem' }}
-                      >
-                        Search Doctors <ExternalLink size={12} />
-                      </button>
+                    <div className="grid grid-2">
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                          <Building size={14} /> Hospital / Clinic Affiliation
+                        </label>
+                        <input
+                          type="text"
+                          name="hospital"
+                          className="form-input"
+                          value={form.hospital}
+                          onChange={handleChange}
+                          placeholder="e.g. Apollo Hospital / City Care Clinic"
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                          <Star size={14} /> Clinical Experience (Years)
+                        </label>
+                        <input
+                          type="number"
+                          name="experience"
+                          min="0"
+                          className="form-input"
+                          value={form.experience}
+                          onChange={handleChange}
+                        />
+                      </div>
                     </div>
 
-                    <div style={{
-                      padding: '1rem', borderRadius: 'var(--radius-md)',
-                      background: 'var(--bg-hover)', border: '1px solid var(--border)'
-                    }}>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Consultations</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>My Appointments</div>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/dashboard')}
-                        className="btn btn-secondary btn-sm"
-                        style={{ width: '100%', justifyContent: 'center', gap: '0.35rem' }}
-                      >
-                        View Dashboard <ExternalLink size={12} />
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <button type="submit" className="btn btn-primary" disabled={saving}>
+                        {saving ? 'Saving...' : 'Update Doctor Info'}
                       </button>
                     </div>
                   </div>
-                </div>
-              )}
-
+                </form>
+              </div>
             </div>
           )}
 
