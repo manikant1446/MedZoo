@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Phone, Lock, ArrowRight, Eye, EyeOff, AtSign } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import GoogleAuthButton from './GoogleAuthButton';
 
 export default function Login() {
   const [identifier, setIdentifier] = useState('');
@@ -45,9 +46,15 @@ export default function Login() {
             <polyline points="6,24 16,24 19,16 22,32 25,12 28,30 31,24 42,24" fill="none" stroke="url(#loginGrad)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <h1 style={{ textAlign: 'center', display: 'block', width: '100%', marginBottom: '1.5rem' }}>Welcome Back</h1>
-
         {error && <div className="error-message">{error}</div>}
+
+        <GoogleAuthButton onError={(msg) => setError(msg)} />
+
+        <div style={{ display: 'flex', alignItems: 'center', margin: '1.25rem 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+          <span style={{ padding: '0 0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>or email / phone</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginBottom: '1.5rem' }}>

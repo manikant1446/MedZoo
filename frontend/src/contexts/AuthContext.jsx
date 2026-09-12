@@ -85,6 +85,16 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const loginWithGoogle = async (credential, role = 'patient') => {
+    const res = await axios.post(`${API_BASE_URL}/auth/google`, { credential, role });
+    const data = res.data;
+    localStorage.setItem('medzoo_token', data.token);
+    localStorage.setItem('medzoo_user', JSON.stringify(data));
+    setUser(data);
+    await refreshStaffAssignments();
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('medzoo_token');
     localStorage.removeItem('medzoo_user');
@@ -104,7 +114,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, loading, login, register, logout, updateUser,
+      user, loading, login, register, loginWithGoogle, logout, updateUser,
       isAuthenticated, role, staffAssignments, isClinicStaff, refreshStaffAssignments
     }}>
       {children}

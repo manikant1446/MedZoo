@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Phone, Mail, Lock, User as UserIcon, HeartPulse, Stethoscope, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import GoogleAuthButton from './GoogleAuthButton';
 
 export default function Register() {
   const [form, setForm] = useState({
-    name: '', phone: '', password: '', role: 'patient',
+    name: '', phone: '', email: '', password: '', role: 'patient',
     specialty: '', hospital: '', qualifications: ''
   });
   const [error, setError] = useState('');
@@ -20,16 +21,24 @@ export default function Register() {
     e.preventDefault();
     setError('');
     
-    // Strict phone number check
-    const phoneRegex = /^[0-9]{10,15}$/;
-    if (!phoneRegex.test(form.phone.trim())) {
-      setError('Please enter a valid phone number containing only digits (10-15 digits).');
+    // Strict 10-digit phone check
+    const cleanPhone = form.phone.trim().replace(/[^0-9]/g, '').slice(-10);
+    if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setError('Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9).');
+      return;
+    }
+
+    // Strict email check
+    const cleanEmail = form.email.trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setError('Please enter a valid Gmail / Email address.');
       return;
     }
 
     setLoading(true);
     try {
-      await register(form);
+      await register({ ...form, phone: cleanPhone, email: cleanEmail });
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed.');
@@ -42,9 +51,17 @@ export default function Register() {
     <div className="auth-container animate-in">
       <div className="auth-card">
         <h1>Create Account</h1>
-        <p className="subtitle">Join MedZoo — your smart healthcare companion</p>
+        <p className="subtitle">Join MedZoo — smart healthcare collaboration</p>
 
         {error && <div className="error-message">{error}</div>}
+
+        <GoogleAuthButton role={form.role} onError={(msg) => setError(msg)} />
+
+        <div style={{ display: 'flex', alignItems: 'center', margin: '1.25rem 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+          <span style={{ padding: '0 0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>or register with email & phone</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="role-selector">
@@ -64,18 +81,27 @@ export default function Register() {
             <label>Full Name</label>
             <div className="input-icon-wrapper">
               <UserIcon />
-              <input type="text" className="form-input" name="name" placeholder="John Doe"
+              <input type="text" className="form-input" name="name" placeholder="Full Name"
                 value={form.name} onChange={handleChange} required />
             </div>
           </div>
 
           <div className="form-group">
-            <label>Phone Number <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
+            <label>Gmail / Email Address <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
+            <div className="input-icon-wrapper">
+              <Mail />
+              <input type="email" className="form-input" name="email" placeholder="example@gmail.com"
+                value={form.email} onChange={handleChange} required />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>10-Digit Mobile Number <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
             <div className="input-icon-wrapper">
               <Phone />
               <input type="tel" className="form-input" name="phone" placeholder="9876543210"
-                value={form.phone} onChange={handleChange} required
-                pattern="[0-9+\s\-().]{7,15}" title="Enter a valid phone number" />
+                value={form.phone} onChange={handleChange} required maxLength={10}
+                pattern="[6-9][0-9]{9}" title="Enter 10 digit mobile number" />
             </div>
           </div>
 

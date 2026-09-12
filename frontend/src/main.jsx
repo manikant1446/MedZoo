@@ -17,13 +17,18 @@ ChartJS.register(
 );
 
 import ErrorBoundary from './components/common/ErrorBoundary.jsx';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1048684728518-medzooclientid.apps.googleusercontent.com';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </GoogleOAuthProvider>
     </ErrorBoundary>
   </StrictMode>,
 );

@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Phone, Lock, Key, ArrowRight, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Phone, Mail, Lock, Key, ArrowRight, ArrowLeft, CheckCircle, AlertCircle, Inbox } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 
 export default function ForgotPasswordOTP() {
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [targetEmail, setTargetEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [step, setStep] = useState(1); // 1: request, 2: verify/reset, 3: success
-  const [autoOtp, setAutoOtp] = useState(''); // helper to show simulated OTP
+  const [simulatedOtp, setSimulatedOtp] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const isEmail = identifier.includes('@');
 
   const handleRequestOTP = async (e) => {
     e.preventDefault();
@@ -22,12 +25,15 @@ export default function ForgotPasswordOTP() {
     setMessage('');
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/auth/forgot-password`, { phone });
-      setAutoOtp(res.data.otp); // show simulated OTP for easy testing
-      setMessage('Simulated OTP code generated successfully!');
+      const res = await axios.post(`${API_BASE_URL}/auth/forgot-password`, { identifier });
+      setTargetEmail(res.data.targetEmail || '');
+      if (res.data.simulatedOtp) {
+        setSimulatedOtp(res.data.simulatedOtp);
+      }
+      setMessage(res.data.message || 'Verification code sent successfully!');
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to request OTP. Make sure phone exists.');
+      setError(err.response?.data?.message || 'Failed to request OTP. Make sure email/phone exists.');
     } finally {
       setLoading(false);
     }
@@ -40,12 +46,15 @@ export default function ForgotPasswordOTP() {
     if (newPassword !== confirmPassword) {
       return setError('Passwords do not match');
     }
+    if (newPassword.length < 6) {
+      return setError('Password must be at least 6 characters');
+    }
     setLoading(true);
     try {
-      // First verify the OTP
-      await axios.post(`${API_BASE_URL}/auth/verify-otp`, { phone, otp });
-      // Then trigger reset
-      await axios.post(`${API_BASE_URL}/auth/reset-password`, { phone, otp, password: newPassword });
+      // First verify OTP
+      await axios.post(`${API_BASE_URL}/auth/verify-otp`, { identifier, otp });
+      // Then reset password
+      await axios.post(`${API_BASE_URL}/auth/reset-password`, { identifier, otp, password: newPassword });
       setStep(3);
     } catch (err) {
       setError(err.response?.data?.message || 'Password reset failed. Invalid OTP.');
@@ -76,28 +85,28 @@ export default function ForgotPasswordOTP() {
         {step === 1 && (
           <>
             <h1>Reset Password</h1>
-            <p className="subtitle">Enter your registered phone number to receive an OTP</p>
+            <p className="subtitle">Enter your registered Gmail or phone number to receive a verification OTP</p>
 
             {error && <div className="error-message"><AlertCircle size={16} /> {error}</div>}
 
             <form onSubmit={handleRequestOTP}>
               <div className="form-group">
-                <label>Phone Number</label>
+                <label>Registered Gmail / Phone Number</label>
                 <div className="input-icon-wrapper">
-                  <Phone size={18} />
+                  {isEmail ? <Mail size={18} /> : <Phone size={18} />}
                   <input
-                    type="tel"
+                    type="text"
                     className="form-input"
-                    placeholder="Enter 10-15 digit phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Enter your Gmail (e.g. name@gmail.com)"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     required
                   />
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
-                {loading ? 'Requesting OTP...' : 'Send Verification Code'}
+              <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
+                {loading ? 'Sending OTP to Gmail...' : 'Send OTP to Gmail'}
                 <ArrowRight size={18} />
               </button>
             </form>
@@ -112,20 +121,42 @@ export default function ForgotPasswordOTP() {
 
         {step === 2 && (
           <>
-            <h1>Enter Verification Code</h1>
-            <p className="subtitle">We generated an OTP for you. Reset your credentials below.</p>
+            <h1>Enter Gmail OTP</h1>
+            <p className="subtitle">
+              {targetEmail ? (
+                <>We sent a 6-digit verification code to <strong>{targetEmail}</strong>. Please check your inbox.</>
+              ) : (
+                <>Enter the verification code sent to your registered account.</>
+              )}
+            </p>
 
-            {autoOtp && (
+            <div style={{
+              background: 'rgba(99, 102, 241, 0.08)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              marginBottom: '1rem',
+              fontSize: '0.85rem',
+              color: '#818cf8'
+            }}>
+              <Inbox size={20} />
+              <span>Please check your <strong>Gmail Inbox</strong> (and Spam folder).</span>
+            </div>
+
+            {simulatedOtp && (
               <div style={{
                 background: 'rgba(16, 185, 129, 0.08)',
                 border: '1px dashed #10b981',
-                padding: '0.75rem',
+                padding: '0.65rem',
                 borderRadius: '8px',
                 textAlign: 'center',
                 marginBottom: '1rem'
               }}>
                 <p style={{ fontSize: '0.8rem', color: '#10b981', margin: 0 }}>
-                  🔑 Simulated SMS Received: <strong>{autoOtp}</strong>
+                  🔑 Server Code (Dev Demo): <strong>{simulatedOtp}</strong>
                 </p>
               </div>
             )}
@@ -157,31 +188,33 @@ export default function ForgotPasswordOTP() {
                   <input
                     type="password"
                     className="form-input"
-                    placeholder="••••••••"
+                    placeholder="Min 6 characters"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
+                    minLength={6}
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Confirm Password</label>
+                <label>Confirm New Password</label>
                 <div className="input-icon-wrapper">
                   <Lock size={18} />
                   <input
                     type="password"
                     className="form-input"
-                    placeholder="••••••••"
+                    placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    minLength={6}
                   />
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
-                {loading ? 'Resetting Password...' : 'Update Password'}
+              <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
+                {loading ? 'Resetting Password...' : 'Reset & Save Password'}
                 <ArrowRight size={18} />
               </button>
             </form>
@@ -200,7 +233,7 @@ export default function ForgotPasswordOTP() {
                 marginRight: 'auto'
               }}
             >
-              Use a different phone number
+              Use a different Gmail / Phone number
             </button>
           </>
         )}
@@ -209,8 +242,8 @@ export default function ForgotPasswordOTP() {
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <CheckCircle size={56} color="#10b981" style={{ marginBottom: '1rem' }} />
             <h1>Password Updated!</h1>
-            <p className="subtitle" style={{ marginBottom: '1.5rem' }}>Your credentials have been successfully updated. You can now log in.</p>
-            <button className="btn btn-primary btn-lg" onClick={() => navigate('/login')}>
+            <p className="subtitle" style={{ marginBottom: '1.5rem' }}>Your credentials have been successfully updated. You can now log in with your new password.</p>
+            <button className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/login')}>
               Go to Login
               <ArrowRight size={18} />
             </button>

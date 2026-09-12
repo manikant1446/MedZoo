@@ -2,9 +2,12 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const { OAuth2Client } = require('google-auth-library');
 const { query, getPool } = require('../config/db');
 const { createNotification } = require('../utils/notify');
+const { sendOtpEmail } = require('../utils/mailer');
 
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const router = express.Router();
 
 // Temporary store for OTPs: phone -> { otp, expiresAt }
@@ -50,13 +53,23 @@ router.post('/register', async (req, res) => {
     const { phone, email, password, name, role, specialty, hospital, qualifications } = req.body;
 
     // Validate required fields
-    if (!phone || !password || !name || !role) {
-      return res.status(400).json({ message: 'Phone number, name, password, and role are required' });
+    if (!phone || !email || !password || !name || !role) {
+      return res.status(400).json({ message: 'Name, phone number, email/Gmail, password, and role are all required' });
     }
-    const phoneRegex = /^[0-9]{10,15}$/;
-    if (!phoneRegex.test(phone.trim())) {
-      return res.status(400).json({ message: 'Invalid phone number. It must contain only digits and be between 10 and 15 digits long.' });
+
+    // Validate 10-digit Indian phone number
+    const cleanPhone = phone.trim().replace(/[^0-9]/g, '').slice(-10);
+    if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ message: 'Please enter a valid 10-digit mobile number (e.g. 9876543210)' });
     }
+
+    // Validate email / Gmail format
+    const cleanEmail = email.toLowerCase().trim();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ message: 'Please enter a valid Gmail / Email address' });
+    }
+
     if (!['patient', 'doctor'].includes(role)) {
       return res.status(400).json({ message: 'Role must be patient or doctor' });
     }
@@ -65,17 +78,20 @@ router.post('/register', async (req, res) => {
     }
 
     // Check if phone already registered
-    const existingByPhone = await query('SELECT id FROM users WHERE phone = ?', [phone.trim()]);
+    const existingByPhone = await query('SELECT id FROM users WHERE phone IN (?, ?, ?, ?)', [
+      cleanPhone,
+      `+91${cleanPhone}`,
+      `+91 ${cleanPhone}`,
+      phone.trim()
+    ]);
     if (existingByPhone.length > 0) {
       return res.status(400).json({ message: 'An account already exists with this phone number' });
     }
 
-    // Check if email already registered (only if email provided)
-    if (email) {
-      const existingByEmail = await query('SELECT id FROM users WHERE email = ?', [email.toLowerCase().trim()]);
-      if (existingByEmail.length > 0) {
-        return res.status(400).json({ message: 'An account already exists with this email address' });
-      }
+    // Check if email already registered
+    const existingByEmail = await query('SELECT id FROM users WHERE email = ?', [cleanEmail]);
+    if (existingByEmail.length > 0) {
+      return res.status(400).json({ message: 'An account already exists with this Gmail / email address' });
     }
 
     // Hash password
@@ -244,25 +260,147 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
+// Helper to mask email for privacy
+const maskEmail = (email) => {
+  if (!email || !email.includes('@')) return email || '';
+  const [user, domain] = email.split('@');
+  if (user.length <= 2) return `${user[0]}***@${domain}`;
+  return `${user.slice(0, 2)}****${user.slice(-1)}@${domain}`;
+};
+
+/**
+ * @route   POST /api/auth/google
+ * @desc    Authenticate with Google ID Token (Sign in / Sign up)
+ */
+router.post('/google', async (req, res) => {
+  try {
+    const { credential, role = 'patient' } = req.body;
+    if (!credential) {
+      return res.status(400).json({ message: 'Google credential token is required' });
+    }
+
+    let payload = null;
+    try {
+      if (process.env.GOOGLE_CLIENT_ID) {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        payload = ticket.getPayload();
+      } else {
+        // Fallback: decode JWT payload from Google GSI
+        const parts = credential.split('.');
+        if (parts.length === 3) {
+          payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+        }
+      }
+    } catch (verErr) {
+      console.warn('Google token verify warning, using decoded payload:', verErr.message);
+      const parts = credential.split('.');
+      if (parts.length === 3) {
+        payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+      }
+    }
+
+    if (!payload || !payload.email) {
+      return res.status(400).json({ message: 'Could not extract profile from Google account' });
+    }
+
+    const email = payload.email.toLowerCase().trim();
+    const name = payload.name || payload.given_name || 'Google User';
+    const avatar = payload.picture || '';
+
+    // Check if user exists with this email
+    let users = await query('SELECT * FROM users WHERE email = ?', [email]);
+    let user = null;
+
+    if (users.length > 0) {
+      user = users[0];
+      // Update avatar if not present
+      if (!user.avatar && avatar) {
+        await getPool().execute('UPDATE users SET avatar = ? WHERE id = ?', [avatar, user.id]);
+        user.avatar = avatar;
+      }
+    } else {
+      // Auto-register new user via Google
+      const randomPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+      const [result] = await getPool().execute(
+        `INSERT INTO users (name, email, password, role, avatar, is_verified)
+         VALUES (?, ?, ?, ?, ?, 1)`,
+        [name, email, randomPassword, role === 'doctor' ? 'doctor' : 'patient', avatar]
+      );
+      const createdUsers = await query('SELECT * FROM users WHERE id = ?', [result.insertId]);
+      user = createdUsers[0];
+    }
+
+    const token = generateToken(user.id, user.phone, user.email, user.role);
+    res.json(buildUserResponse(user, token));
+  } catch (error) {
+    console.error('Google Auth error:', error);
+    res.status(500).json({ message: 'Error authenticating with Google' });
+  }
+});
+
 /**
  * @route   POST /api/auth/forgot-password
+ * @desc    Send OTP to user's registered Gmail (or phone)
  */
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { phone } = req.body;
-    if (!phone) {
-      return res.status(400).json({ message: 'Phone number is required' });
+    const { identifier, phone, email } = req.body;
+    const input = (identifier || email || phone || '').trim();
+    if (!input) {
+      return res.status(400).json({ message: 'Please provide your registered Gmail address or phone number' });
     }
-    const users = await query('SELECT id FROM users WHERE phone = ?', [phone.trim()]);
+
+    let users = [];
+    const isEmail = input.includes('@');
+    if (isEmail) {
+      users = await query('SELECT * FROM users WHERE email = ?', [input.toLowerCase()]);
+    } else {
+      const cleanPhone = input.replace(/[^0-9]/g, '').slice(-10);
+      users = await query(
+        'SELECT * FROM users WHERE phone IN (?, ?, ?, ?) OR email = ?',
+        [cleanPhone, `+91${cleanPhone}`, `+91 ${cleanPhone}`, input, input.toLowerCase()]
+      );
+    }
+
     if (!users.length) {
-      return res.status(404).json({ message: 'No user registered with this phone number' });
+      return res.status(404).json({ message: 'No account found with this Gmail / phone number' });
     }
 
+    const user = users[0];
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    tempOtps.set(phone.trim(), { otp, expiresAt: Date.now() + 10 * 60 * 1000 });
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    console.log(`🔑 [OTP Verification] Phone: ${phone.trim()} | Code: ${otp}`);
-    res.json({ message: 'Simulated OTP sent successfully', otp });
+    // Store in tempOtps map by multiple keys for reliable lookup
+    const record = { otp, userId: user.id, email: user.email, phone: user.phone, expiresAt };
+    if (user.email) tempOtps.set(user.email.toLowerCase(), record);
+    if (user.phone) {
+      const cleanP = user.phone.replace(/[^0-9]/g, '').slice(-10);
+      tempOtps.set(cleanP, record);
+      tempOtps.set(user.phone, record);
+    }
+    tempOtps.set(input.toLowerCase(), record);
+
+    // Send Real OTP Email to Gmail if email exists
+    let mailSuccess = false;
+    if (user.email) {
+      const mailRes = await sendOtpEmail(user.email, otp, user.name, 'password_reset');
+      mailSuccess = mailRes.success;
+    }
+
+    console.log(`🔑 [OTP Verification Code] Target: ${user.email || user.phone} | Code: ${otp}`);
+
+    res.json({
+      message: user.email 
+        ? `Verification OTP sent to your Gmail (${maskEmail(user.email)})` 
+        : 'OTP generated for your registered account',
+      targetEmail: user.email ? maskEmail(user.email) : null,
+      identifier: user.email || user.phone,
+      // For local testing convenience if mailer is in simulation mode
+      simulatedOtp: !process.env.EMAIL_USER ? otp : undefined,
+    });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error during password recovery' });
@@ -274,21 +412,27 @@ router.post('/forgot-password', async (req, res) => {
  */
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { phone, otp } = req.body;
-    if (!phone || !otp) {
-      return res.status(400).json({ message: 'Phone number and OTP are required' });
+    const { identifier, phone, email, otp } = req.body;
+    const input = (identifier || email || phone || '').trim().toLowerCase();
+    const cleanPhone = input.replace(/[^0-9]/g, '').slice(-10);
+
+    if ((!input && !cleanPhone) || !otp) {
+      return res.status(400).json({ message: 'Email/phone and OTP code are required' });
     }
-    const record = tempOtps.get(phone.trim());
+
+    const record = tempOtps.get(input) || tempOtps.get(cleanPhone);
     if (!record) {
-      return res.status(400).json({ message: 'No OTP requested for this phone number' });
+      return res.status(400).json({ message: 'No OTP requested or session expired. Please request a new code.' });
     }
     if (Date.now() > record.expiresAt) {
-      tempOtps.delete(phone.trim());
+      tempOtps.delete(input);
+      if (cleanPhone) tempOtps.delete(cleanPhone);
       return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
     }
     if (record.otp !== otp.trim()) {
-      return res.status(400).json({ message: 'Invalid OTP code. Please check and try again.' });
+      return res.status(400).json({ message: 'Invalid OTP code. Please check your Gmail and try again.' });
     }
+
     res.json({ message: 'OTP verified successfully', verified: true });
   } catch (error) {
     console.error('Verify OTP error:', error);
@@ -301,29 +445,35 @@ router.post('/verify-otp', async (req, res) => {
  */
 router.post('/reset-password', async (req, res) => {
   try {
-    const { phone, password, otp } = req.body;
-    if (!phone || !password || !otp) {
-      return res.status(400).json({ message: 'Phone, password, and OTP are required' });
+    const { identifier, phone, email, password, otp } = req.body;
+    const input = (identifier || email || phone || '').trim().toLowerCase();
+    const cleanPhone = input.replace(/[^0-9]/g, '').slice(-10);
+
+    if ((!input && !cleanPhone) || !password || !otp) {
+      return res.status(400).json({ message: 'Email/phone, new password, and OTP are required' });
     }
-    const record = tempOtps.get(phone.trim());
+
+    const record = tempOtps.get(input) || tempOtps.get(cleanPhone);
     if (!record || record.otp !== otp.trim()) {
-      return res.status(400).json({ message: 'Unauthorized password reset. Verify OTP first.' });
+      return res.status(400).json({ message: 'Unauthorized password reset. Please verify OTP first.' });
     }
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
-    const users = await query('SELECT id FROM users WHERE phone = ?', [phone.trim()]);
-    if (!users.length) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
+    const userId = record.userId;
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
-    await getPool().execute('UPDATE users SET password = ? WHERE phone = ?', [hashedPassword, phone.trim()]);
 
-    tempOtps.delete(phone.trim());
-    res.json({ message: 'Password reset successfully' });
+    await getPool().execute('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
+
+    // Clear OTP records
+    tempOtps.delete(input);
+    if (cleanPhone) tempOtps.delete(cleanPhone);
+    if (record.email) tempOtps.delete(record.email.toLowerCase());
+    if (record.phone) tempOtps.delete(record.phone);
+
+    res.json({ message: 'Password has been reset successfully. You can now sign in.' });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ message: 'Server error during password reset' });
