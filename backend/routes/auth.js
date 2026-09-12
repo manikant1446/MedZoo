@@ -1032,5 +1032,30 @@ router.post('/leave-clinic', protect, async (req, res) => {
     res.status(500).json({ message: 'Error processing resignation from clinic staff' });
   }
 });
+/**
+ * @route   GET /api/auth/migrate-columns
+ * @desc    Ensure age, gender, blood_group columns exist (idempotent, safe to call anytime)
+ */
+router.get('/migrate-columns', async (req, res) => {
+  const results = [];
+  const cols = [
+    { name: 'age', type: 'INT NULL DEFAULT NULL' },
+    { name: 'gender', type: "VARCHAR(20) DEFAULT ''" },
+    { name: 'blood_group', type: "VARCHAR(10) DEFAULT ''" }
+  ];
+  for (const col of cols) {
+    try {
+      await getPool().execute(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+      results.push(`${col.name}: added`);
+    } catch (e) {
+      if (e.message.includes('Duplicate column')) {
+        results.push(`${col.name}: already exists`);
+      } else {
+        results.push(`${col.name}: error - ${e.message}`);
+      }
+    }
+  }
+  res.json({ migration: results });
+});
 
 module.exports = router;
