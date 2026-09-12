@@ -50,7 +50,7 @@ const buildUserResponse = (user, token) => ({
  */
 router.post('/register', async (req, res) => {
   try {
-    const { phone, email, password, name, role, specialty, hospital, qualifications } = req.body;
+    const { phone, email, password, name, role, specialty, hospital, qualifications, experience, address, locality } = req.body;
 
     // Validate required fields
     if (!phone || !email || !password || !name || !role) {
@@ -100,8 +100,8 @@ router.post('/register', async (req, res) => {
 
     // Create user — SQL INSERT
     const [result] = await getPool().execute(
-      `INSERT INTO users (phone, email, password, name, role, specialty, hospital, qualifications)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (phone, email, password, name, role, specialty, hospital, qualifications, experience, address, locality)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         phone.trim(),
         email ? email.toLowerCase().trim() : null,
@@ -111,6 +111,9 @@ router.post('/register', async (req, res) => {
         role === 'doctor' ? (specialty || '') : '',
         role === 'doctor' ? (hospital || '') : '',
         role === 'doctor' ? (qualifications || '') : '',
+        role === 'doctor' ? (Number(experience) || 0) : 0,
+        role === 'doctor' ? (address || '') : '',
+        role === 'doctor' ? (locality || '') : '',
       ]
     );
 
@@ -359,7 +362,7 @@ router.post('/google', async (req, res) => {
  */
 router.post('/complete-profile', protect, async (req, res) => {
   try {
-    const { name, phone, password, role, specialty, hospital, qualifications } = req.body;
+    const { name, phone, password, role, specialty, hospital, qualifications, experience, address, locality } = req.body;
     const userId = req.user._id;
 
     if (!phone || !password) {
@@ -392,7 +395,7 @@ router.post('/complete-profile', protect, async (req, res) => {
 
     await getPool().execute(
       `UPDATE users 
-       SET name = ?, phone = ?, password = ?, role = ?, specialty = ?, hospital = ?, qualifications = ?
+       SET name = ?, phone = ?, password = ?, role = ?, specialty = ?, hospital = ?, qualifications = ?, experience = ?, address = ?, locality = ?
        WHERE id = ?`,
       [
         userName,
@@ -402,6 +405,9 @@ router.post('/complete-profile', protect, async (req, res) => {
         userRole === 'doctor' ? (specialty || '') : '',
         userRole === 'doctor' ? (hospital || '') : '',
         userRole === 'doctor' ? (qualifications || '') : '',
+        userRole === 'doctor' ? (Number(experience) || 0) : 0,
+        userRole === 'doctor' ? (address || '') : '',
+        userRole === 'doctor' ? (locality || '') : '',
         userId
       ]
     );

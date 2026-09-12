@@ -676,25 +676,15 @@ export default function Profile() {
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
                           <Phone size={14} /> Phone Number <span style={{ color: 'var(--accent-primary)', fontSize: '0.72rem', fontWeight: 600 }}>(Editable)</span>
                         </label>
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          <span style={{
-                            padding: '0.65rem 0.8rem', background: 'var(--bg-hover)',
-                            border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
-                            color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center'
-                          }}>
-                            +91
-                          </span>
-                          <input
-                            type="tel"
-                            name="phone"
-                            className="form-input"
-                            value={form.phone}
-                            onChange={handlePhoneChange}
-                            placeholder="10-digit mobile"
-                            maxLength={10}
-                            style={{ flex: 1 }}
-                          />
-                        </div>
+                        <input
+                          type="tel"
+                          name="phone"
+                          className="form-input"
+                          value={form.phone}
+                          onChange={handlePhoneChange}
+                          placeholder="Enter 10-digit mobile number"
+                          maxLength={10}
+                        />
                       </div>
 
                       <div className="form-group" style={{ margin: 0 }}>
