@@ -356,12 +356,6 @@ router.post('/sync', protect, async (req, res) => {
       syncedContacts.push(u);
     }
 
-    // Update contacts permission to granted
-    await getPool().execute(
-      "UPDATE users SET contacts_permission_status = 'granted' WHERE id = ?",
-      [req.user._id]
-    );
-
     res.status(200).json({
       message: `Successfully synced ${syncedContacts.length} contacts`,
       contactsCount: syncedContacts.length,
@@ -379,10 +373,6 @@ router.post('/sync', protect, async (req, res) => {
  */
 router.post('/deny', protect, async (req, res) => {
   try {
-    await getPool().execute(
-      "UPDATE users SET contacts_permission_status = 'denied' WHERE id = ?",
-      [req.user._id]
-    );
     res.json({ message: 'Contacts permission status updated to denied' });
   } catch (error) {
     console.error('Deny contacts permission error:', error);

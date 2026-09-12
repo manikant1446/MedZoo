@@ -16,13 +16,13 @@ const protect = async (req, res, next) => {
       let users;
       try {
         users = await query(
-          'SELECT id, name, email, phone, role, specialty, hospital, qualifications, experience, address, locality, age, gender, blood_group, rating, ratings_count, is_verified, avatar, contacts_permission_status FROM users WHERE id = ?',
+          'SELECT id, name, email, phone, role, specialty, hospital, qualifications, experience, address, locality, age, gender, blood_group, rating, ratings_count, is_verified, avatar FROM users WHERE id = ?',
           [decoded.id]
         );
       } catch (dbErr) {
         // Fallback if age/gender/blood_group columns don't exist yet on DB
         users = await query(
-          'SELECT id, name, email, phone, role, specialty, hospital, qualifications, experience, address, locality, rating, ratings_count, is_verified, avatar, contacts_permission_status FROM users WHERE id = ?',
+          'SELECT id, name, email, phone, role, specialty, hospital, qualifications, experience, address, locality, rating, ratings_count, is_verified, avatar FROM users WHERE id = ?',
           [decoded.id]
         );
       }
@@ -52,8 +52,7 @@ const protect = async (req, res, next) => {
         rating: u.rating,
         ratingsCount: u.ratings_count,
         isVerified: !!u.is_verified,
-        avatar: u.avatar,
-        contactsPermissionStatus: u.contacts_permission_status
+        avatar: u.avatar
       };
 
       return next();

@@ -24,8 +24,6 @@ CREATE TABLE IF NOT EXISTS users (
   ratings_count   INT          DEFAULT 0,
   is_verified     TINYINT(1)   DEFAULT 0,
   avatar          TEXT,
-
-  contacts_permission_status ENUM('prompt','granted','denied') DEFAULT 'prompt',
   created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

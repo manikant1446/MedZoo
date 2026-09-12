@@ -43,7 +43,6 @@ const buildUserResponse = (user, token) => ({
   rating: user.rating || 5.0,
   ratingsCount: user.ratings_count || 0,
   isVerified: !!user.is_verified,
-  contactsPermissionStatus: user.contacts_permission_status || 'prompt',
   ...(token ? { token } : {}),
 });
 
