@@ -772,11 +772,11 @@ export default function Profile() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem' }}>
                   <Key size={20} color="var(--accent-primary)" />
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>
-                    Change or Update Password
+                    Change Password
                   </h3>
                 </div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                  A strong password helps keep your medical files, patient notes, and login details secure.
+                  A strong password helps keep your medical files, and login details secure.
                 </p>
 
                 {passwordSuccess && (
