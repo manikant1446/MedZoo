@@ -45,8 +45,17 @@ export function AuthProvider({ children }) {
         setStaffAssignments([]);
         return [];
       }
-      const res = await axios.get(`${API_BASE_URL}/auth/staff-assignments`);
-      const list = res.data.assignments || [];
+      // Use native fetch to bypass global Axios 401 interceptor
+      // so a staff-assignments error never triggers global logout
+      const res = await fetch(`${API_BASE_URL}/auth/staff-assignments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        setStaffAssignments([]);
+        return [];
+      }
+      const data = await res.json();
+      const list = data.assignments || [];
       setStaffAssignments(list);
       return list;
     } catch (e) {
@@ -59,14 +68,17 @@ export function AuthProvider({ children }) {
     const stored = localStorage.getItem('medzoo_user');
     const token = localStorage.getItem('medzoo_token');
     if (stored && token) {
-      setUser(JSON.parse(stored));
+      const parsedUser = JSON.parse(stored);
+      setUser(parsedUser);
       refreshStaffAssignments();
 
-      // Sync fresh profile data from DB
+      // Sync fresh profile data from DB (preserve token from localStorage)
       axios.get(`${API_BASE_URL}/auth/me`)
         .then((res) => {
           if (res.data) {
-            updateUser(res.data);
+            const merged = { ...parsedUser, ...res.data, token };
+            localStorage.setItem('medzoo_user', JSON.stringify(merged));
+            setUser(merged);
           }
         })
         .catch(() => {});
@@ -100,7 +112,8 @@ export function AuthProvider({ children }) {
     localStorage.setItem('medzoo_token', data.token);
     localStorage.setItem('medzoo_user', JSON.stringify(data));
     setUser(data);
-    await refreshStaffAssignments();
+    // Don't await — staff check must not block or break login
+    refreshStaffAssignments();
     return data;
   };
 
@@ -112,9 +125,11 @@ export function AuthProvider({ children }) {
   };
 
   const updateUser = (updatedData) => {
-    const updated = { ...user, ...updatedData };
-    localStorage.setItem('medzoo_user', JSON.stringify(updated));
-    setUser(updated);
+    setUser((prevUser) => {
+      const updated = { ...prevUser, ...updatedData };
+      localStorage.setItem('medzoo_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const isAuthenticated = !!user;
