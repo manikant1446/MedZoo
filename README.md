@@ -3,7 +3,7 @@
 
   <h1>MedZoo</h1>
 
-  <p><strong>Trust-Network Healthcare Platform — Connecting Patients with Trusted Doctors</strong></p>
+  <p><strong>Smart Healthcare & Doctor Appointment Booking Platform</strong></p>
 
   <p>
     <a href="https://medzoo.vercel.app"><img src="https://img.shields.io/badge/🌐_Live-medzoo.vercel.app-00C853?style=for-the-badge" alt="Live" /></a>
@@ -26,7 +26,7 @@
 <br />
 
 ## 💡 Overview
-MedZoo is a full-stack healthcare platform built around a **social trust network** model. Instead of blindly choosing doctors from a directory, patients discover trusted doctors through their existing contacts — people they already know and trust who were successfully treated. This creates a decentralized recommendation engine powered by real relationships.
+MedZoo is a modern healthcare management and appointment booking platform connecting patients with verified doctors and specialist clinics. Patients can discover doctors by specialty, check live time slots, and schedule appointments effortlessly. Doctors and clinics get a complete operational suite with consultation tracking, digital prescription generation, emergency alerts, patient records export, and real-time analytics.
 
 The platform serves three distinct user roles — **Patients**, **Doctors**, and **Clinic Staff** — each with tailored dashboards, workflows, and permissions.
 
@@ -63,11 +63,11 @@ The platform serves three distinct user roles — **Patients**, **Doctors**, and
 
 | Feature | Description |
 |:---|:---|
-| **🔍 Trust-Based Doctor Discovery** | Core differentiator — patients discover doctors through their contact network. Syncs phonebook contacts to find which doctors treated people the patient already knows and trusts. Ranked by trust score and treatment outcomes. |
-| **📱 Contact Sync** | Permission-based contact synchronization that maps phone contacts to registered MedZoo users. Creates a trust graph used for doctor recommendations. Includes granular permission flow (prompt → granted → denied). |
-| **🗓️ Appointment Booking** | Browse available doctors, view dynamic 30-minute time slots based on doctor availability, and book appointments instantly. Supports emergency flagging and appointment notes. |
-| **🩺 Medical Dashboard** | Personalized health dashboard showing upcoming appointments, past consultations with diagnoses, treatment history, and doctor ratings. |
-| **⭐ Doctor Ratings** | Rate doctors after completed consultations. Ratings aggregate into the doctor's overall score visible across the platform. |
+| **🔍 Doctor Discovery & Search** | Search and filter verified doctors by medical specialty, qualifications, experience, and hospital. View ratings and patient count in real time. |
+| **🗓️ Appointment Booking** | Browse available doctors, view dynamic 30-minute time slots based on doctor calendar availability, and book appointments instantly. Supports emergency flagging and appointment notes. |
+| **🩺 Medical Dashboard** | Personalized health dashboard showing upcoming appointments, past consultations with diagnoses, treatment history, and doctor feedback. |
+| **⭐ Doctor Ratings** | Rate doctors with 1–5 stars after completed consultations. Ratings dynamically calculate into the doctor's average score. |
+| **🚨 Emergency Protocol** | Trigger urgent care alerts with real-time WebSocket notifications sent directly to the clinic doctor and staff. |
 
 ### 🔐 Authentication & Security
 
@@ -177,10 +177,8 @@ MedZoo/
 │   │       │   ├── PatientList.jsx        # Patient records + PDF export
 │   │       │   └── ReferralManager.jsx    # Case referral system
 │   │       └── patient/               # Patient-only components
-│   │           ├── PatientDashboard.jsx     # Patient home + history
-│   │           ├── DoctorDiscovery.jsx      # Trust-network doctor search
-│   │           ├── ContactManager.jsx       # Phonebook sync
-│   │           └── ContactPermissionModal.jsx # Contact permission flow
+│   │           ├── PatientDashboard.jsx     # Patient home + consultation history
+│   │           └── DoctorDiscovery.jsx      # Doctor search & appointment booking
 │   ├── package.json
 │   └── vite.config.js
 │
@@ -196,7 +194,6 @@ MedZoo/
 │   │   ├── auth.js                    # Registration, login, password reset
 │   │   ├── appointments.js            # CRUD + status transitions
 │   │   ├── consultations.js           # Medical records + prescriptions
-│   │   ├── contacts.js                # Contact sync + trust network
 │   │   ├── doctors.js                 # Doctor lookup + profiles
 │   │   ├── notifications.js           # Push notification management
 │   │   └── referrals.js               # Doctor-to-doctor referrals
@@ -331,20 +328,12 @@ All endpoints are prefixed with `/api` in production. Base URL: `https://medzoo.
 | `PUT` | `/consultations/:id` | Update consultation details |
 | `GET` | `/consultations/patient/:id` | Get patient consultation history |
 
-### Contacts & Trust Network
-
-| Method | Endpoint | Description |
-|:---:|:---|:---|
-| `POST` | `/contacts/sync` | Sync phonebook contacts |
-| `GET` | `/contacts` | Get synced contacts list |
-| `PUT` | `/contacts/permission` | Update contact sync permission |
-
 ### Doctors
 
 | Method | Endpoint | Description |
 |:---:|:---|:---|
-| `GET` | `/doctors` | List all registered doctors |
-| `GET` | `/doctors/discover` | Discover doctors via trust network |
+| `GET` | `/doctors` | List & filter registered doctors (search, specialty) |
+| `GET` | `/doctors/:id` | Get detailed doctor profile & patient statistics |
 
 ### Referrals
 

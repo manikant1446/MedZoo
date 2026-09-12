@@ -157,7 +157,7 @@ export default function PatientDashboard() {
               No consultations recorded yet
             </h4>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: 420, margin: '0 auto 1.5rem' }}>
-              Search for trusted specialists in your network, view recommendations, and book your first appointment.
+              Search for specialist doctors, check availability, and book your first appointment.
             </p>
             <Link to="/discover" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
               <Search size={16} /> Explore Doctors <ArrowRight size={16} />

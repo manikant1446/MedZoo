@@ -138,7 +138,7 @@ export default function DoctorDiscovery() {
       <div className="page-header flex-between">
         <div>
           <h1>Find Doctors</h1>
-          <p>Trust-based discovery powered by your social network</p>
+          <p>Find specialist doctors, check availability, and book appointments</p>
         </div>
         <button className="btn btn-secondary" onClick={() => { setShowAppointments(!showAppointments); if (!showAppointments) fetchMyAppointments(); }}>
           <Calendar size={16} /> {showAppointments ? 'Find Doctors' : 'My Appointments'}

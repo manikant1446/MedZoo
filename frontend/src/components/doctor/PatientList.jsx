@@ -168,7 +168,7 @@ export default function PatientList() {
     doc.setFontSize(10);
     doc.setTextColor(200, 200, 255);
     doc.setFont('helvetica', 'normal');
-    doc.text('Decentralized Health Records Platform', 52, 19);
+    doc.text('Smart Healthcare Platform', 52, 19);
     
     // Doctor Details Section (Left Col)
     doc.setFontSize(12);
