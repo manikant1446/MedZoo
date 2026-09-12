@@ -173,6 +173,11 @@ export default function Profile() {
     setPasswordSuccess('');
     setPasswordError('');
 
+    if (!passwordForm.currentPassword) {
+      setPasswordError('Current password is required to change your password.');
+      return;
+    }
+
     if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
       setPasswordError('New password must be at least 6 characters long.');
       return;
@@ -186,7 +191,7 @@ export default function Profile() {
     setPasswordSaving(true);
     try {
       const res = await axios.put(`${API_BASE_URL}/auth/change-password`, {
-        currentPassword: passwordForm.currentPassword || undefined,
+        currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
       });
 
@@ -800,13 +805,10 @@ export default function Profile() {
 
                 <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   
-                  {/* Current Password (Optional if user created via Google) */}
+                  {/* Current Password (Required to verify identity) */}
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                      <Lock size={14} /> Current Password
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        (Leave blank if setting password for the first time)
-                      </span>
+                      <Lock size={14} /> Current Password <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <div style={{ position: 'relative' }}>
                       <input
@@ -818,7 +820,8 @@ export default function Profile() {
                           setPasswordForm({ ...passwordForm, currentPassword: e.target.value });
                           if (passwordError) setPasswordError('');
                         }}
-                        placeholder="Enter current password if already set"
+                        placeholder="Enter your current password"
+                        required
                         style={{ paddingRight: '2.5rem' }}
                       />
                       <button

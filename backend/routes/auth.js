@@ -431,6 +431,10 @@ router.put('/change-password', protect, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user._id;
 
+    if (!currentPassword) {
+      return res.status(400).json({ message: 'Current password is required to change your password.' });
+    }
+
     if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
     }
@@ -442,12 +446,10 @@ router.put('/change-password', protect, async (req, res) => {
     }
     const user = users[0];
 
-    // If current password provided, verify it
-    if (currentPassword) {
-      const isMatch = await bcrypt.compare(currentPassword, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Current password is incorrect.' });
-      }
+    // Always verify current password before allowing change
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect.' });
     }
 
     const salt = await bcrypt.genSalt(12);
