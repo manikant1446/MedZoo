@@ -87,7 +87,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Gmail / Email Address <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
+            <label>Email <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
             <div className="input-icon-wrapper">
               <Mail />
               <input type="email" className="form-input" name="email" placeholder="example@gmail.com"
@@ -96,7 +96,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>10-Digit Mobile Number <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
+            <label>Phone Number <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
             <div className="input-icon-wrapper">
               <Phone />
               <input type="tel" className="form-input" name="phone" placeholder="9876543210"
