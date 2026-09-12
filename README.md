@@ -66,6 +66,7 @@ The platform serves three distinct user roles — **Patients**, **Doctors**, and
 | **🔍 Doctor Discovery & Search** | Search and filter verified doctors by medical specialty, qualifications, experience, and hospital. View ratings and patient count in real time. |
 | **🗓️ Appointment Booking** | Browse available doctors, view dynamic 30-minute time slots based on doctor calendar availability, and book appointments instantly. Supports emergency flagging and appointment notes. |
 | **🩺 Medical Dashboard** | Personalized health dashboard showing upcoming appointments, past consultations with diagnoses, treatment history, and doctor feedback. |
+| **🩸 Personal Health Profile** | Complete demographic and medical info management — age, gender, blood group, contact phone, and residential address/locality for emergency coordination. |
 | **⭐ Doctor Ratings** | Rate doctors with 1–5 stars after completed consultations. Ratings dynamically calculate into the doctor's average score. |
 | **🚨 Emergency Protocol** | Trigger urgent care alerts with real-time WebSocket notifications sent directly to the clinic doctor and staff. |
 
@@ -73,10 +74,12 @@ The platform serves three distinct user roles — **Patients**, **Doctors**, and
 
 | Feature | Description |
 |:---|:---|
+| **Google OAuth 2.0** | 1-Tap instant login & sign-up via Google accounts with automated profile completion (`CompleteProfile`) for missing contact & medical details. |
+| **Two-Step Registration** | Multi-step onboarding collecting account credentials first, followed by demographic details (age, gender, blood group, address) for patients or clinical credentials for doctors. |
 | **JWT Authentication** | Stateless token-based auth with bcrypt password hashing. Tokens persist across sessions via `localStorage`. |
 | **Role-Based Access Control** | Three distinct roles (`patient`, `doctor`, `staff`) with route-level and component-level access guards. Staff inherits appointment permissions from their assigned doctor. |
-| **Invitation-Only Registration** | Doctors and staff register exclusively through secure, time-limited invitation tokens. Patients can self-register. |
-| **Password Recovery** | OTP-based forgot-password flow for account recovery. |
+| **Invitation-Only Staff Onboarding** | Doctors and staff register exclusively through secure, time-limited invitation tokens. Patients can self-register. |
+| **Password Recovery** | OTP-based forgot-password flow for account recovery, plus authenticated password change. |
 | **Protected Routes** | Client-side route guards (`ProtectedRoute` component) with role validation + server-side middleware enforcement. |
 
 ---
@@ -164,10 +167,12 @@ MedZoo/
 │   │   └── components/
 │   │       ├── common/                # Shared components (all roles)
 │   │       │   ├── Login.jsx          # Email/phone login form
-│   │       │   ├── Register.jsx       # Patient self-registration
+│   │       │   ├── Register.jsx       # Multi-step self-registration
+│   │       │   ├── GoogleAuthButton.jsx # Google 1-Tap OAuth trigger
+│   │       │   ├── CompleteProfile.jsx # Post-OAuth missing details onboarding
 │   │       │   ├── ForgotPasswordOTP.jsx  # Password recovery flow
 │   │       │   ├── AcceptInvitation.jsx   # Token-based role onboarding
-│   │       │   ├── Profile.jsx        # User profile management
+│   │       │   ├── Profile.jsx        # User profile & demographic details
 │   │       │   ├── Navbar.jsx         # Navigation bar with role-aware menu
 │   │       │   ├── NotificationsDropdown.jsx  # Real-time notification center
 │   │       │   └── ErrorBoundary.jsx  # React error boundary
@@ -288,7 +293,15 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 | `DB_PASSWORD` | ✅ | Database password |
 | `DB_NAME` | ✅ | Database name (e.g., `medzoo`) |
 | `JWT_SECRET` | ✅ | Secret key for JWT token signing |
+| `GOOGLE_CLIENT_ID` | ❌ | Google OAuth 2.0 Web Client ID for token verification |
 | `PORT` | ❌ | Server port (default: `5001`) |
+
+### Frontend (`frontend/.env`)
+
+| Variable | Required | Description |
+|:---|:---:|:---|
+| `VITE_API_BASE_URL` | ❌ | Backend API base URL (defaults to production URL) |
+| `VITE_GOOGLE_CLIENT_ID` | ❌ | Google OAuth Client ID for 1-Tap sign-in button |
 
 ---
 
@@ -300,14 +313,16 @@ All endpoints are prefixed with `/api` in production. Base URL: `https://medzoo.
 
 | Method | Endpoint | Description |
 |:---:|:---|:---|
-| `POST` | `/auth/register` | Register a new patient account |
+| `POST` | `/auth/register` | Multi-step registration (phone, email, password, role, age, gender, blood group, address) |
+| `POST` | `/auth/google` | Sign-in or sign-up with Google OAuth 2.0 credential |
 | `POST` | `/auth/login` | Login with email/phone + password |
-| `POST` | `/auth/forgot-password` | Initiate password reset |
-| `POST` | `/auth/reset-password` | Reset password with OTP |
+| `POST` | `/auth/forgot-password` | Initiate password reset OTP |
+| `POST` | `/auth/reset-password` | Reset password with verified OTP |
+| `PUT` | `/auth/change-password` | Change password for logged-in user |
 | `POST` | `/auth/invite` | Generate staff/doctor invitation link |
 | `POST` | `/auth/accept-invitation` | Register via invitation token |
 | `GET` | `/auth/me` | Get current user profile |
-| `PUT` | `/auth/profile` | Update user profile |
+| `PUT` | `/auth/profile` | Update profile info (phone, email, age, gender, blood group, address, avatar) |
 
 ### Appointments
 
@@ -364,16 +379,17 @@ All endpoints are prefixed with `/api` in production. Base URL: `https://medzoo.
 The application uses **9 relational tables** with foreign key constraints and indexed queries:
 
 ```
-┌──────────┐     ┌───────────────┐     ┌──────────────┐
-│  users   │────▶│ consultations │────▶│ prescriptions│
-│          │     │               │     │              │
-│ id       │     │ patient_id FK │     │ consult_id FK│
-│ name     │     │ doctor_id  FK │     │ medicine     │
-│ email    │     │ diagnosis     │     │ dosage       │
-│ phone    │     │ category      │     │ duration     │
-│ role     │     │ status        │     └──────────────┘
-│ specialty│     └───────────────┘
-└──────────┘
+┌──────────────┐     ┌───────────────┐     ┌──────────────┐
+│    users     │────▶│ consultations │────▶│ prescriptions│
+│              │     │               │     │              │
+│ id           │     │ patient_id FK │     │ consult_id FK│
+│ name         │     │ doctor_id  FK │     │ medicine     │
+│ email, phone │     │ diagnosis     │     │ dosage       │
+│ role         │     │ category      │     │ duration     │
+│ age, gender  │     │ status        │     └──────────────┘
+│ blood_group  │     └───────────────┘
+│ specialty    │
+└──────────────┘
      │
      ├────▶ appointments     (patient_id, doctor_id, date, time_slot, status)
      ├────▶ referrals        (from_doctor_id, to_doctor_id, patient_id, priority)
