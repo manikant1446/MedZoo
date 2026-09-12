@@ -24,10 +24,13 @@ import {
   ExternalLink,
   Camera,
   Calendar,
-  Sparkles
+  Sparkles,
+  HeartPulse
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 // Built-in SVG avatars representing different roles
 const PRESET_AVATARS = [
@@ -67,7 +70,10 @@ export default function Profile() {
     experience: user?.experience || 0,
     hospital: user?.hospital || '',
     specialty: user?.specialty || '',
-    qualifications: user?.qualifications || ''
+    qualifications: user?.qualifications || '',
+    age: user?.age || '',
+    gender: user?.gender || '',
+    bloodGroup: user?.bloodGroup || ''
   });
 
   // Password change form state
@@ -101,7 +107,10 @@ export default function Profile() {
         experience: user.experience || 0,
         hospital: user.hospital || '',
         specialty: user.specialty || '',
-        qualifications: user.qualifications || ''
+        qualifications: user.qualifications || '',
+        age: user.age || '',
+        gender: user.gender || '',
+        bloodGroup: user.bloodGroup || ''
       }));
     }
   }, [user]);
@@ -427,6 +436,22 @@ export default function Profile() {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Location</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{user?.locality || user?.address || 'Not specified'}</div>
                   </div>
+                  {user?.role === 'patient' && (
+                    <>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Age &amp; Gender</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                          {user?.age ? `${user.age} yrs` : 'Age N/A'} • {user?.gender || 'Gender N/A'}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Blood Group</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: user?.bloodGroup ? '#ef4444' : 'var(--text-muted)' }}>
+                          {user?.bloodGroup || 'Not specified'}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -639,6 +664,60 @@ export default function Profile() {
                         onChange={handleChange}
                         placeholder="youremail@example.com"
                       />
+                    </div>
+
+                    {/* Age, Gender & Blood Group (Relevant for all users / patients) */}
+                    <div className="grid grid-3" style={{ gap: '0.75rem' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                          <User size={14} /> Age (Years)
+                        </label>
+                        <input
+                          type="number"
+                          name="age"
+                          className="form-input"
+                          value={form.age}
+                          onChange={handleChange}
+                          placeholder="e.g. 28"
+                          min="1"
+                          max="125"
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                          <User size={14} /> Gender
+                        </label>
+                        <select
+                          className="form-select"
+                          name="gender"
+                          value={form.gender}
+                          onChange={handleChange}
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                          <option value="Prefer not to say">Prefer not to say</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                          <HeartPulse size={14} /> Blood Group
+                        </label>
+                        <select
+                          className="form-select"
+                          name="bloodGroup"
+                          value={form.bloodGroup}
+                          onChange={handleChange}
+                        >
+                          <option value="">Select Blood Group</option>
+                          {BLOOD_GROUPS.map((bg) => (
+                            <option key={bg} value={bg}>{bg}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     {/* Address & Locality */}

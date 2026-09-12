@@ -17,10 +17,13 @@ import {
   Building,
   Award,
   Clock,
-  MapPin
+  MapPin,
+  HeartPulse
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const SPECIALTY_OPTIONS = [
   'General Physician',
@@ -59,7 +62,10 @@ export default function CompleteProfile() {
     qualifications: user?.qualifications || '',
     locality: user?.locality || '',
     address: user?.address || '',
-    experience: user?.experience || ''
+    experience: user?.experience || '',
+    age: user?.age || '',
+    gender: user?.gender || '',
+    bloodGroup: user?.bloodGroup || ''
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -123,7 +129,10 @@ export default function CompleteProfile() {
     setError('');
 
     if (form.role === 'patient') {
-      if (!validateStep1()) return;
+      if (form.age && (Number(form.age) < 1 || Number(form.age) > 125)) {
+        setError('Please enter a valid age between 1 and 125.');
+        return;
+      }
     } else {
       const finalSpecialty = form.specialty === 'Other' ? form.customSpecialty.trim() : form.specialty;
       if (!finalSpecialty) {
@@ -152,7 +161,10 @@ export default function CompleteProfile() {
         qualifications: form.qualifications.trim(),
         locality: form.locality.trim(),
         address: form.address.trim(),
-        experience: Number(form.experience) || 0
+        experience: Number(form.experience) || 0,
+        age: form.age ? Number(form.age) : null,
+        gender: form.gender.trim(),
+        bloodGroup: form.bloodGroup.trim()
       });
 
       updateUser({ ...res.data, isProfileIncomplete: false });
@@ -205,7 +217,9 @@ export default function CompleteProfile() {
           </div>
 
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.25rem' }}>
-            {step === 1 ? 'Welcome to MedZoo!' : 'Doctor Professional Details'}
+            {step === 1
+              ? 'Welcome to MedZoo!'
+              : (form.role === 'doctor' ? 'Doctor Professional Details' : 'Personal & Address Details')}
           </h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
             Signed in with <strong style={{ color: 'var(--text-primary)' }}>{user?.email}</strong>
@@ -213,46 +227,46 @@ export default function CompleteProfile() {
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
             {step === 1
               ? 'Complete your account credentials to continue'
-              : 'Add your medical qualifications and clinic affiliation'}
+              : (form.role === 'doctor'
+                  ? 'Add your medical qualifications and clinic affiliation'
+                  : 'Add your personal information and residential address')}
           </p>
         </div>
 
-        {/* Step indicator for Doctor */}
-        {form.role === 'doctor' && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              color: step === 1 ? 'var(--accent-primary)' : 'var(--accent-success)',
-              fontWeight: 600, fontSize: '0.8rem'
+        {/* Step indicator for both Patient and Doctor */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            color: step === 1 ? 'var(--accent-primary)' : 'var(--accent-success)',
+            fontWeight: 600, fontSize: '0.8rem'
+          }}>
+            <span style={{
+              width: '22px', height: '22px', borderRadius: '50%',
+              background: step === 1 ? 'rgba(99, 102, 241, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+              border: step === 1 ? '2px solid var(--accent-primary)' : '2px solid var(--accent-success)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem'
             }}>
-              <span style={{
-                width: '22px', height: '22px', borderRadius: '50%',
-                background: step === 1 ? 'rgba(99, 102, 241, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                border: step === 1 ? '2px solid var(--accent-primary)' : '2px solid var(--accent-success)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem'
-              }}>
-                {step === 2 ? '✓' : '1'}
-              </span>
-              Account Setup
-            </div>
-            <div style={{ width: '28px', height: '2px', background: step === 2 ? 'var(--accent-success)' : 'var(--border)' }}></div>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              color: step === 2 ? 'var(--accent-primary)' : 'var(--text-muted)',
-              fontWeight: 600, fontSize: '0.8rem'
-            }}>
-              <span style={{
-                width: '22px', height: '22px', borderRadius: '50%',
-                background: step === 2 ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-hover)',
-                border: step === 2 ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem'
-              }}>
-                2
-              </span>
-              Clinic Details
-            </div>
+              {step === 2 ? '✓' : '1'}
+            </span>
+            Account Setup
           </div>
-        )}
+          <div style={{ width: '28px', height: '2px', background: step === 2 ? 'var(--accent-success)' : 'var(--border)' }}></div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            color: step === 2 ? 'var(--accent-primary)' : 'var(--text-muted)',
+            fontWeight: 600, fontSize: '0.8rem'
+          }}>
+            <span style={{
+              width: '22px', height: '22px', borderRadius: '50%',
+              background: step === 2 ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-hover)',
+              border: step === 2 ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem'
+            }}>
+              2
+            </span>
+            {form.role === 'doctor' ? 'Clinic Details' : 'Personal & Address'}
+          </div>
+        </div>
 
         {error && (
           <div style={{
@@ -280,7 +294,7 @@ export default function CompleteProfile() {
 
         {/* STEP 1: Basic Information (Without 91 box, with confirmPassword) */}
         {step === 1 && (
-          <form onSubmit={form.role === 'doctor' ? handleNextStep : handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <form onSubmit={handleNextStep} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             
             {/* Account Role Selector */}
             <div>
@@ -436,27 +450,14 @@ export default function CompleteProfile() {
               )}
             </div>
 
-            {/* Next Step (Doctor) or Submit (Patient) */}
-            {form.role === 'doctor' ? (
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem', padding: '0.85rem' }}
-              >
-                Continue to Doctor Details <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem', padding: '0.85rem' }}
-                disabled={loading}
-              >
-                {loading ? 'Saving Profile...' : (
-                  <>Complete Account Setup <ArrowRight size={16} /></>
-                )}
-              </button>
-            )}
+            {/* Continue to Step 2 */}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem', padding: '0.85rem' }}
+            >
+              {form.role === 'doctor' ? 'Continue to Doctor Details' : 'Continue to Personal Details'} <ArrowRight size={16} />
+            </button>
           </form>
         )}
 
@@ -592,6 +593,119 @@ export default function CompleteProfile() {
                 disabled={loading}
               >
                 {loading ? 'Saving Profile...' : 'Complete Doctor Registration'}
+                <ArrowRight size={16} />
+              </button>
+            </div>
+
+          </form>
+        )}
+
+        {/* STEP 2: PATIENT DETAILS (Age, Gender, Blood Group, Locality, Address) */}
+        {step === 2 && form.role === 'patient' && (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            
+            {/* Row: Age & Gender */}
+            <div className="grid grid-2" style={{ gap: '0.75rem' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <User size={15} /> Age (Years)
+                </label>
+                <input
+                  type="number"
+                  name="age"
+                  className="form-input"
+                  value={form.age}
+                  onChange={handleChange}
+                  placeholder="e.g. 28"
+                  min="1"
+                  max="125"
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <User size={15} /> Gender
+                </label>
+                <select
+                  className="form-select"
+                  name="gender"
+                  value={form.gender}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Blood Group */}
+            <div className="form-group" style={{ margin: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                <HeartPulse size={15} /> Blood Group
+              </label>
+              <select
+                className="form-select"
+                name="bloodGroup"
+                value={form.bloodGroup}
+                onChange={handleChange}
+              >
+                <option value="">Select Blood Group</option>
+                {BLOOD_GROUPS.map((bg) => (
+                  <option key={bg} value={bg}>{bg}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Locality & Address */}
+            <div className="grid grid-2" style={{ gap: '0.75rem' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <MapPin size={15} /> Locality / City
+                </label>
+                <input
+                  type="text"
+                  name="locality"
+                  className="form-input"
+                  value={form.locality}
+                  onChange={handleChange}
+                  placeholder="e.g. Whitefield, Bengaluru"
+                />
+              </div>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <MapPin size={15} /> Full Address
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  className="form-input"
+                  value={form.address}
+                  onChange={handleChange}
+                  placeholder="Flat/House No, Building, Street"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons: Back + Submit */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="btn btn-secondary"
+                style={{ gap: '0.4rem', padding: '0.85rem 1.25rem' }}
+              >
+                <ArrowLeft size={16} /> Back
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ flex: 1, justifyContent: 'center', padding: '0.85rem' }}
+                disabled={loading}
+              >
+                {loading ? 'Saving Profile...' : 'Complete Patient Registration'}
                 <ArrowRight size={16} />
               </button>
             </div>

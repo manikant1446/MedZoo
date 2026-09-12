@@ -174,6 +174,23 @@ const initSchema = async () => {
         AND r.id NOT IN (SELECT referral_id FROM consultations WHERE referral_id IS NOT NULL)
     `);
 
+    // Ensure patient columns (age, gender, blood_group) exist in users table
+    const patientCols = [
+      { name: 'age', type: 'INT NULL DEFAULT NULL' },
+      { name: 'gender', type: 'VARCHAR(20) DEFAULT ""' },
+      { name: 'blood_group', type: 'VARCHAR(10) DEFAULT ""' }
+    ];
+    for (const col of patientCols) {
+      const colCheck = await query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = ?`,
+        [process.env.DB_NAME || 'medzoo', col.name]
+      );
+      if (!colCheck.length) {
+        await getPool().query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+      }
+    }
+
     console.log('✅ Database schema initialized (tables ready)');
   } catch (err) {
     console.error('❌ Schema initialization error:', err.message);

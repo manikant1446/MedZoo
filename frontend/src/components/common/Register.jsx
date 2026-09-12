@@ -15,8 +15,9 @@ import {
   Award,
   MapPin,
   Clock,
-  FileBadge,
-  DollarSign
+  Calendar,
+  Activity,
+  Droplet
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import GoogleAuthButton from './GoogleAuthButton';
@@ -41,6 +42,8 @@ const SPECIALTY_OPTIONS = [
   'Other'
 ];
 
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
 export default function Register() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -50,16 +53,18 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     role: 'patient',
+    // Patient specific fields (Step 2)
+    age: '',
+    gender: '',
+    bloodGroup: '',
+    locality: '',
+    address: '',
     // Doctor specific fields (Step 2)
     specialty: '',
     customSpecialty: '',
     qualifications: '',
     hospital: '',
-    locality: '',
-    address: '',
-    experience: '',
-    registrationNo: '',
-    consultationFee: ''
+    experience: ''
   });
 
   const [error, setError] = useState('');
@@ -80,7 +85,7 @@ export default function Register() {
     if (error) setError('');
   };
 
-  // Validate Step 1 credentials
+  // Validate Step 1 credentials (Common for both Patient & Doctor)
   const validateStep1 = () => {
     if (!form.name.trim()) {
       setError('Please enter your full name.');
@@ -113,7 +118,7 @@ export default function Register() {
     return true;
   };
 
-  // Move from Step 1 to Step 2 (Doctor only)
+  // Move from Step 1 to Step 2
   const handleNextStep = (e) => {
     e.preventDefault();
     setError('');
@@ -122,13 +127,16 @@ export default function Register() {
     }
   };
 
-  // Submit complete registration (Patient on Step 1, Doctor on Step 2)
+  // Submit complete registration on Step 2
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (form.role === 'patient') {
-      if (!validateStep1()) return;
+      if (form.age && (Number(form.age) < 1 || Number(form.age) > 125)) {
+        setError('Please enter a valid age between 1 and 125.');
+        return;
+      }
     } else {
       // Validate Doctor Step 2 fields
       const finalSpecialty = form.specialty === 'Other' ? form.customSpecialty.trim() : form.specialty;
@@ -161,7 +169,10 @@ export default function Register() {
         qualifications: form.qualifications.trim(),
         locality: form.locality.trim(),
         address: form.address.trim(),
-        experience: Number(form.experience) || 0
+        experience: Number(form.experience) || 0,
+        age: form.age ? Number(form.age) : null,
+        gender: form.gender.trim(),
+        bloodGroup: form.bloodGroup.trim()
       });
       navigate('/dashboard');
     } catch (err) {
@@ -175,48 +186,48 @@ export default function Register() {
     <div className="auth-container animate-in">
       <div className="auth-card" style={{ maxWidth: step === 2 ? '560px' : '480px', transition: 'all 0.3s ease' }}>
         
-        {/* Step Indicator Header for Doctor */}
-        {form.role === 'doctor' && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              color: step === 1 ? 'var(--accent-primary)' : 'var(--accent-success)',
-              fontWeight: 600, fontSize: '0.8rem'
+        {/* Step Indicator Header (2 Steps for both Patient & Doctor) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            color: step === 1 ? 'var(--accent-primary)' : 'var(--accent-success)',
+            fontWeight: 600, fontSize: '0.8rem'
+          }}>
+            <span style={{
+              width: '24px', height: '24px', borderRadius: '50%',
+              background: step === 1 ? 'rgba(99, 102, 241, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+              border: step === 1 ? '2px solid var(--accent-primary)' : '2px solid var(--accent-success)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem'
             }}>
-              <span style={{
-                width: '24px', height: '24px', borderRadius: '50%',
-                background: step === 1 ? 'rgba(99, 102, 241, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                border: step === 1 ? '2px solid var(--accent-primary)' : '2px solid var(--accent-success)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem'
-              }}>
-                {step === 2 ? '✓' : '1'}
-              </span>
-              Account Details
-            </div>
-            <div style={{ width: '30px', height: '2px', background: step === 2 ? 'var(--accent-success)' : 'var(--border)' }}></div>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              color: step === 2 ? 'var(--accent-primary)' : 'var(--text-muted)',
-              fontWeight: 600, fontSize: '0.8rem'
-            }}>
-              <span style={{
-                width: '24px', height: '24px', borderRadius: '50%',
-                background: step === 2 ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-hover)',
-                border: step === 2 ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem'
-              }}>
-                2
-              </span>
-              Doctor Details
-            </div>
+              {step === 2 ? '✓' : '1'}
+            </span>
+            Account Credentials
           </div>
-        )}
+          <div style={{ width: '30px', height: '2px', background: step === 2 ? 'var(--accent-success)' : 'var(--border)' }}></div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            color: step === 2 ? 'var(--accent-primary)' : 'var(--text-muted)',
+            fontWeight: 600, fontSize: '0.8rem'
+          }}>
+            <span style={{
+              width: '24px', height: '24px', borderRadius: '50%',
+              background: step === 2 ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-hover)',
+              border: step === 2 ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem'
+            }}>
+              2
+            </span>
+            {form.role === 'doctor' ? 'Doctor Details' : 'Personal & Address'}
+          </div>
+        </div>
 
-        <h1>{step === 1 ? 'Create Account' : 'Doctor Details'}</h1>
+        <h1>{step === 1 ? 'Create Account' : (form.role === 'doctor' ? 'Doctor Professional Details' : 'Personal & Address Details')}</h1>
         <p className="subtitle">
           {step === 1
             ? 'Join MedZoo — smart healthcare collaboration'
-            : 'Provide your clinical qualifications and hospital affiliation'}
+            : (form.role === 'doctor'
+                ? 'Provide your clinical qualifications and hospital affiliation'
+                : 'Help doctors identify you and coordinate appointments')}
         </p>
 
         {error && <div className="error-message">{error}</div>}
@@ -232,7 +243,7 @@ export default function Register() {
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
             </div>
 
-            <form onSubmit={form.role === 'doctor' ? handleNextStep : handleSubmit}>
+            <form onSubmit={handleNextStep}>
               {/* Role Toggle */}
               <div className="role-selector">
                 <div
@@ -364,17 +375,10 @@ export default function Register() {
                 )}
               </div>
 
-              {/* Submit / Next Step button */}
-              {form.role === 'doctor' ? (
-                <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }}>
-                  Continue to Doctor Details <ArrowRight size={18} />
-                </button>
-              ) : (
-                <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
-                  {loading ? 'Creating account...' : 'Create Account'}
-                  <ArrowRight size={18} />
-                </button>
-              )}
+              {/* Continue to Step 2 */}
+              <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }}>
+                {form.role === 'doctor' ? 'Continue to Doctor Details' : 'Continue to Personal Details'} <ArrowRight size={18} />
+              </button>
             </form>
           </>
         )}
@@ -522,6 +526,126 @@ export default function Register() {
                   disabled={loading}
                 >
                   {loading ? 'Registering Doctor...' : 'Complete Registration'}
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+
+            </div>
+          </form>
+        )}
+
+        {/* STEP 2: PATIENT DETAILS (Age, Gender, Blood Group, Locality, Address) */}
+        {step === 2 && form.role === 'patient' && (
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              {/* Row: Age & Gender */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label>Age (Years)</label>
+                  <div className="input-icon-wrapper">
+                    <UserIcon />
+                    <input
+                      type="number"
+                      className="form-input"
+                      name="age"
+                      placeholder="e.g. 28"
+                      value={form.age}
+                      onChange={handleChange}
+                      min="1"
+                      max="125"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label>Gender</label>
+                  <div className="input-icon-wrapper">
+                    <UserIcon />
+                    <select
+                      className="form-select"
+                      name="gender"
+                      value={form.gender}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Blood Group */}
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Blood Group</label>
+                <div className="input-icon-wrapper">
+                  <HeartPulse />
+                  <select
+                    className="form-select"
+                    name="bloodGroup"
+                    value={form.bloodGroup}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select Blood Group</option>
+                    {BLOOD_GROUPS.map((bg) => (
+                      <option key={bg} value={bg}>{bg}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Locality / Sector / City */}
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>City / Locality / Sector</label>
+                <div className="input-icon-wrapper">
+                  <MapPin />
+                  <input
+                    type="text"
+                    className="form-input"
+                    name="locality"
+                    placeholder="e.g. Whitefield, Bengaluru / Sector 18, Noida"
+                    value={form.locality}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
+              {/* Full Address */}
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Full Residential Address</label>
+                <div className="input-icon-wrapper">
+                  <MapPin />
+                  <input
+                    type="text"
+                    className="form-input"
+                    name="address"
+                    placeholder="Flat/House No, Building, Street, Area"
+                    value={form.address}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons: Back + Submit */}
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="btn btn-secondary"
+                  style={{ gap: '0.4rem', padding: '0.8rem 1.25rem' }}
+                >
+                  <ArrowLeft size={16} /> Back
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1, justifyContent: 'center', padding: '0.8rem' }}
+                  disabled={loading}
+                >
+                  {loading ? 'Creating Patient Account...' : 'Complete Registration'}
                   <ArrowRight size={18} />
                 </button>
               </div>

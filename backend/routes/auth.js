@@ -37,6 +37,9 @@ const buildUserResponse = (user, token) => ({
   experience: user.experience || 0,
   address: user.address || '',
   locality: user.locality || '',
+  age: user.age || null,
+  gender: user.gender || '',
+  bloodGroup: user.blood_group || '',
   rating: user.rating || 5.0,
   ratingsCount: user.ratings_count || 0,
   isVerified: !!user.is_verified,
@@ -50,7 +53,7 @@ const buildUserResponse = (user, token) => ({
  */
 router.post('/register', async (req, res) => {
   try {
-    const { phone, email, password, name, role, specialty, hospital, qualifications, experience, address, locality } = req.body;
+    const { phone, email, password, name, role, specialty, hospital, qualifications, experience, address, locality, age, gender, bloodGroup } = req.body;
 
     // Validate required fields
     if (!phone || !email || !password || !name || !role) {
@@ -100,8 +103,8 @@ router.post('/register', async (req, res) => {
 
     // Create user — SQL INSERT
     const [result] = await getPool().execute(
-      `INSERT INTO users (phone, email, password, name, role, specialty, hospital, qualifications, experience, address, locality)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (phone, email, password, name, role, specialty, hospital, qualifications, experience, address, locality, age, gender, blood_group)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         phone.trim(),
         email ? email.toLowerCase().trim() : null,
@@ -112,8 +115,11 @@ router.post('/register', async (req, res) => {
         role === 'doctor' ? (hospital || '') : '',
         role === 'doctor' ? (qualifications || '') : '',
         role === 'doctor' ? (Number(experience) || 0) : 0,
-        role === 'doctor' ? (address || '') : '',
-        role === 'doctor' ? (locality || '') : '',
+        address ? address.trim() : '',
+        locality ? locality.trim() : '',
+        age ? (Number(age) || null) : null,
+        gender ? gender.trim() : '',
+        bloodGroup ? bloodGroup.trim() : ''
       ]
     );
 
@@ -195,7 +201,7 @@ router.get('/me', protect, (req, res) => {
  */
 router.put('/profile', protect, async (req, res) => {
   try {
-    const { name, phone, avatar, address, locality, experience, hospital, email, specialty, qualifications } = req.body;
+    const { name, phone, avatar, address, locality, experience, hospital, email, specialty, qualifications, age, gender, bloodGroup } = req.body;
 
     const userId = req.user._id;
 
@@ -207,6 +213,9 @@ router.put('/profile', protect, async (req, res) => {
     if (avatar !== undefined) { fields.push('avatar = ?');      values.push(avatar); }
     if (address !== undefined){ fields.push('address = ?');     values.push(address); }
     if (locality !== undefined){ fields.push('locality = ?');   values.push(locality); }
+    if (age !== undefined) { fields.push('age = ?');            values.push(age ? (Number(age) || null) : null); }
+    if (gender !== undefined) { fields.push('gender = ?');      values.push(gender); }
+    if (bloodGroup !== undefined) { fields.push('blood_group = ?'); values.push(bloodGroup); }
 
     // Phone update
     if (phone !== undefined) {
@@ -362,7 +371,7 @@ router.post('/google', async (req, res) => {
  */
 router.post('/complete-profile', protect, async (req, res) => {
   try {
-    const { name, phone, password, role, specialty, hospital, qualifications, experience, address, locality } = req.body;
+    const { name, phone, password, role, specialty, hospital, qualifications, experience, address, locality, age, gender, bloodGroup } = req.body;
     const userId = req.user._id;
 
     if (!phone || !password) {
@@ -395,7 +404,7 @@ router.post('/complete-profile', protect, async (req, res) => {
 
     await getPool().execute(
       `UPDATE users 
-       SET name = ?, phone = ?, password = ?, role = ?, specialty = ?, hospital = ?, qualifications = ?, experience = ?, address = ?, locality = ?
+       SET name = ?, phone = ?, password = ?, role = ?, specialty = ?, hospital = ?, qualifications = ?, experience = ?, address = ?, locality = ?, age = ?, gender = ?, blood_group = ?
        WHERE id = ?`,
       [
         userName,
@@ -406,8 +415,11 @@ router.post('/complete-profile', protect, async (req, res) => {
         userRole === 'doctor' ? (hospital || '') : '',
         userRole === 'doctor' ? (qualifications || '') : '',
         userRole === 'doctor' ? (Number(experience) || 0) : 0,
-        userRole === 'doctor' ? (address || '') : '',
-        userRole === 'doctor' ? (locality || '') : '',
+        address ? address.trim() : '',
+        locality ? locality.trim() : '',
+        age ? (Number(age) || null) : null,
+        gender ? gender.trim() : '',
+        bloodGroup ? bloodGroup.trim() : '',
         userId
       ]
     );
