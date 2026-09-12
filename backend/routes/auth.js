@@ -430,7 +430,56 @@ router.post('/complete-profile', protect, async (req, res) => {
     res.json(buildUserResponse(updatedUser, token));
   } catch (error) {
     console.error('Complete profile error:', error);
-    res.status(500).json({ message: 'Server error completing profile.' });
+    // If it failed due to age/gender/blood_group column missing on production DB, fallback update
+    if (error.code === 'ER_BAD_FIELD_ERROR' || error.message.includes("Unknown column")) {
+      try {
+        const { name, phone, password, role, specialty, hospital, qualifications, experience, address, locality } = req.body;
+        const userId = req.user._id;
+        const salt = await bcrypt.genSalt(12);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        const cleanPhone = phone.trim().replace(/[^0-9]/g, '').slice(-10);
+        const userRole = ['patient', 'doctor'].includes(role) ? role : (req.user.role || 'patient');
+        const userName = name && name.trim() ? name.trim() : req.user.name;
+
+        await getPool().execute(
+          `UPDATE users 
+           SET name = ?, phone = ?, password = ?, role = ?, specialty = ?, hospital = ?, qualifications = ?, experience = ?, address = ?, locality = ?
+           WHERE id = ?`,
+          [
+            userName,
+            cleanPhone,
+            hashedPassword,
+            userRole,
+            userRole === 'doctor' ? (specialty || '') : '',
+            userRole === 'doctor' ? (hospital || '') : '',
+            userRole === 'doctor' ? (qualifications || '') : '',
+            userRole === 'doctor' ? (Number(experience) || 0) : 0,
+            address ? address.trim() : '',
+            locality ? locality.trim() : '',
+            userId
+          ]
+        );
+
+        // Try adding the missing columns dynamically now
+        try {
+          await getPool().query('ALTER TABLE users ADD COLUMN age INT NULL DEFAULT NULL');
+          await getPool().query('ALTER TABLE users ADD COLUMN gender VARCHAR(20) DEFAULT ""');
+          await getPool().query('ALTER TABLE users ADD COLUMN blood_group VARCHAR(10) DEFAULT ""');
+        } catch (alterErr) {
+          // Columns might already exist or DB user might have restricted ALTER
+        }
+
+        const updated = await query('SELECT * FROM users WHERE id = ?', [userId]);
+        const updatedUser = updated[0];
+        const token = generateToken(updatedUser.id, updatedUser.phone, updatedUser.email, updatedUser.role);
+        return res.json(buildUserResponse(updatedUser, token));
+      } catch (fallbackErr) {
+        console.error('Fallback complete profile error:', fallbackErr);
+        return res.status(500).json({ message: fallbackErr.message || 'Server error completing profile.' });
+      }
+    }
+
+    res.status(500).json({ message: error.message || 'Server error completing profile.' });
   }
 });
 

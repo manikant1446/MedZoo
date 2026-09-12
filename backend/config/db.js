@@ -181,13 +181,24 @@ const initSchema = async () => {
       { name: 'blood_group', type: 'VARCHAR(10) DEFAULT ""' }
     ];
     for (const col of patientCols) {
-      const colCheck = await query(
-        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = ?`,
-        [process.env.DB_NAME || 'medzoo', col.name]
-      );
-      if (!colCheck.length) {
-        await getPool().query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+      try {
+        const colCheck = await query(
+          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = ?`,
+          [col.name]
+        );
+        if (!colCheck.length) {
+          await getPool().query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+        }
+      } catch (colErr) {
+        // Fallback: direct ALTER TABLE (ignore if duplicate column error 1060)
+        try {
+          await getPool().query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+        } catch (alterErr) {
+          if (!alterErr.message.includes('Duplicate column name')) {
+            console.warn(`Warning adding column ${col.name}:`, alterErr.message);
+          }
+        }
       }
     }
 
