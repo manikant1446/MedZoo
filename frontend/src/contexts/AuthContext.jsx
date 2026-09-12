@@ -17,28 +17,16 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-// Axios interceptor: handle 401 responses globally
-// Only auto-logout when the token itself is rejected (on /auth/ endpoints OR 
-// when the error message explicitly says token failed/not authorized)
-// Do NOT logout for resource 401s (e.g. /consultations, /patients, etc.)
+// Axios interceptor: handle 401 responses globally (auto-logout)
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const url = error.config?.url || '';
-      const msg = (error.response?.data?.message || '').toLowerCase();
-      // Only force-logout for genuine token failures, not resource access denials
-      const isTokenFailure = 
-        msg.includes('token failed') || 
-        msg.includes('no token') || 
-        msg.includes('not authorized, token') ||
-        (url.includes('/auth/login') || url.includes('/auth/register'));
-      if (isTokenFailure) {
-        localStorage.removeItem('medzoo_token');
-        localStorage.removeItem('medzoo_user');
-        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-          window.location.href = '/login';
-        }
+      localStorage.removeItem('medzoo_token');
+      localStorage.removeItem('medzoo_user');
+      // Only redirect if not already on login/register
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);
@@ -57,17 +45,8 @@ export function AuthProvider({ children }) {
         setStaffAssignments([]);
         return [];
       }
-      // Use native fetch to bypass global Axios 401 interceptor
-      // so a staff-assignments error never triggers global logout
-      const res = await fetch(`${API_BASE_URL}/auth/staff-assignments`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        setStaffAssignments([]);
-        return [];
-      }
-      const data = await res.json();
-      const list = data.assignments || [];
+      const res = await axios.get(`${API_BASE_URL}/auth/staff-assignments`);
+      const list = res.data.assignments || [];
       setStaffAssignments(list);
       return list;
     } catch (e) {
@@ -80,20 +59,8 @@ export function AuthProvider({ children }) {
     const stored = localStorage.getItem('medzoo_user');
     const token = localStorage.getItem('medzoo_token');
     if (stored && token) {
-      const parsedUser = JSON.parse(stored);
-      setUser(parsedUser);
+      setUser(JSON.parse(stored));
       refreshStaffAssignments();
-
-      // Sync fresh profile data from DB (preserve token from localStorage)
-      axios.get(`${API_BASE_URL}/auth/me`)
-        .then((res) => {
-          if (res.data) {
-            const merged = { ...parsedUser, ...res.data, token };
-            localStorage.setItem('medzoo_user', JSON.stringify(merged));
-            setUser(merged);
-          }
-        })
-        .catch(() => {});
     }
     setLoading(false);
   }, []);
@@ -124,8 +91,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('medzoo_token', data.token);
     localStorage.setItem('medzoo_user', JSON.stringify(data));
     setUser(data);
-    // Don't await — staff check must not block or break login
-    refreshStaffAssignments();
+    await refreshStaffAssignments();
     return data;
   };
 
@@ -137,11 +103,9 @@ export function AuthProvider({ children }) {
   };
 
   const updateUser = (updatedData) => {
-    setUser((prevUser) => {
-      const updated = { ...prevUser, ...updatedData };
-      localStorage.setItem('medzoo_user', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = { ...user, ...updatedData };
+    localStorage.setItem('medzoo_user', JSON.stringify(updated));
+    setUser(updated);
   };
 
   const isAuthenticated = !!user;

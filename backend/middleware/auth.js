@@ -14,7 +14,7 @@ const protect = async (req, res, next) => {
 
       // SQL replace: User.findById(decoded.id).select('-password')
       const users = await query(
-        'SELECT id, name, email, phone, role, specialty, hospital, qualifications, experience, address, locality, age, gender, blood_group, rating, ratings_count, is_verified, avatar, contacts_permission_status FROM users WHERE id = ?',
+        'SELECT id, name, email, phone, role, specialty, hospital, qualifications, experience, address, locality, rating, ratings_count, is_verified, avatar, contacts_permission_status FROM users WHERE id = ?',
         [decoded.id]
       );
 
@@ -37,9 +37,6 @@ const protect = async (req, res, next) => {
         experience: u.experience,
         address: u.address,
         locality: u.locality,
-        age: u.age || null,
-        gender: u.gender || '',
-        bloodGroup: u.blood_group || '',
         rating: u.rating,
         ratingsCount: u.ratings_count,
         isVerified: !!u.is_verified,
