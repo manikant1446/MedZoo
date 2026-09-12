@@ -32,7 +32,6 @@ import { API_BASE_URL } from '../../config';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-// Built-in SVG avatars representing different roles
 const PRESET_AVATARS = [
   {
     name: 'Doctor (Male)',
