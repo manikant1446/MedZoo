@@ -5,6 +5,7 @@ import Login from './components/common/Login';
 import Register from './components/common/Register';
 import ForgotPasswordOTP from './components/common/ForgotPasswordOTP';
 import AcceptInvitation from './components/common/AcceptInvitation';
+import CompleteProfile from './components/common/CompleteProfile';
 import Profile from './components/common/Profile';
 import PatientDashboard from './components/patient/PatientDashboard';
 import DoctorDiscovery from './components/patient/DoctorDiscovery';
@@ -58,6 +59,11 @@ function App() {
         {/* Dashboard (role-based) */}
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardRouter /></ProtectedRoute>
+        } />
+
+        {/* Complete Profile (Google Onboarding) */}
+        <Route path="/complete-profile" element={
+          <ProtectedRoute><CompleteProfile /></ProtectedRoute>
         } />
 
         {/* Profile */}

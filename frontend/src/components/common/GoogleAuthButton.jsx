@@ -16,8 +16,12 @@ export default function GoogleAuthButton({ role = 'patient', onError }) {
 
     setLoading(true);
     try {
-      await loginWithGoogle(credentialResponse.credential, role);
-      navigate('/dashboard');
+      const res = await loginWithGoogle(credentialResponse.credential, role);
+      if (res?.isProfileIncomplete) {
+        navigate('/complete-profile');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       console.error('Google Sign-In failed:', err);
       const msg = err.response?.data?.message || 'Failed to authenticate with Google. Please try again.';

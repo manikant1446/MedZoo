@@ -319,6 +319,7 @@ router.post('/google', async (req, res) => {
     let users = await query('SELECT * FROM users WHERE email = ?', [email]);
     let user = null;
 
+    let isNewUser = false;
     if (users.length > 0) {
       user = users[0];
       // Update avatar if not present
@@ -327,6 +328,7 @@ router.post('/google', async (req, res) => {
         user.avatar = avatar;
       }
     } else {
+      isNewUser = true;
       // Auto-register new user via Google
       const randomPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
       const [result] = await getPool().execute(
@@ -338,11 +340,119 @@ router.post('/google', async (req, res) => {
       user = createdUsers[0];
     }
 
+    const isProfileIncomplete = !user.phone;
     const token = generateToken(user.id, user.phone, user.email, user.role);
-    res.json(buildUserResponse(user, token));
+    res.json({
+      ...buildUserResponse(user, token),
+      isNewUser,
+      isProfileIncomplete,
+    });
   } catch (error) {
     console.error('Google Auth error:', error);
     res.status(500).json({ message: 'Error authenticating with Google' });
+  }
+});
+
+/**
+ * @route   POST /api/auth/complete-profile
+ * @desc    Complete profile for Google users (set name, phone, password, role)
+ */
+router.post('/complete-profile', protect, async (req, res) => {
+  try {
+    const { name, phone, password, role, specialty, hospital, qualifications } = req.body;
+    const userId = req.user._id;
+
+    if (!phone || !password) {
+      return res.status(400).json({ message: '10-digit mobile number and password are required.' });
+    }
+
+    const cleanPhone = phone.trim().replace(/[^0-9]/g, '').slice(-10);
+    if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ message: 'Please enter a valid 10-digit Indian mobile number.' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+    }
+
+    // Check if phone already registered to another user
+    const existing = await query(
+      'SELECT id FROM users WHERE phone IN (?, ?, ?, ?) AND id != ?',
+      [cleanPhone, `+91${cleanPhone}`, `+91 ${cleanPhone}`, phone.trim(), userId]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'This phone number is already registered to another account.' });
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const userRole = ['patient', 'doctor'].includes(role) ? role : (req.user.role || 'patient');
+    const userName = name && name.trim() ? name.trim() : req.user.name;
+
+    await getPool().execute(
+      `UPDATE users 
+       SET name = ?, phone = ?, password = ?, role = ?, specialty = ?, hospital = ?, qualifications = ?
+       WHERE id = ?`,
+      [
+        userName,
+        cleanPhone,
+        hashedPassword,
+        userRole,
+        userRole === 'doctor' ? (specialty || '') : '',
+        userRole === 'doctor' ? (hospital || '') : '',
+        userRole === 'doctor' ? (qualifications || '') : '',
+        userId
+      ]
+    );
+
+    const updated = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    const updatedUser = updated[0];
+    const token = generateToken(updatedUser.id, updatedUser.phone, updatedUser.email, updatedUser.role);
+    res.json(buildUserResponse(updatedUser, token));
+  } catch (error) {
+    console.error('Complete profile error:', error);
+    res.status(500).json({ message: 'Server error completing profile.' });
+  }
+});
+
+/**
+ * @route   PUT /api/auth/change-password
+ * @desc    Change / update password from Security settings
+ */
+router.put('/change-password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user._id;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+
+    // Fetch user with password hash
+    const users = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!users.length) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    const user = users[0];
+
+    // If current password provided, verify it
+    if (currentPassword) {
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Current password is incorrect.' });
+      }
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await getPool().execute('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
+
+    res.json({ success: true, message: 'Password updated successfully!' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ message: 'Server error updating password.' });
   }
 });
 
