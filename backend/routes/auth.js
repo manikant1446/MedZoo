@@ -206,17 +206,22 @@ router.put('/profile', protect, async (req, res) => {
     if (locality !== undefined){ fields.push('locality = ?');   values.push(locality); }
 
     // Phone update
-    if (phone !== undefined && phone.trim() !== '') {
-      const cleanPhone = phone.trim().replace(/[^0-9]/g, '').slice(-10);
-      if (cleanPhone.length !== 10) {
-        return res.status(400).json({ message: 'Phone number must be a valid 10-digit number' });
+    if (phone !== undefined) {
+      if (phone && phone.trim() !== '') {
+        const cleanPhone = phone.trim().replace(/[^0-9]/g, '').slice(-10);
+        if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+          return res.status(400).json({ message: 'Phone number must be a valid 10-digit mobile number' });
+        }
+        const existingPhone = await query(
+          'SELECT id FROM users WHERE phone IN (?, ?, ?, ?) AND id != ?',
+          [cleanPhone, `+91${cleanPhone}`, `+91 ${cleanPhone}`, phone.trim(), userId]
+        );
+        if (existingPhone.length > 0) {
+          return res.status(400).json({ message: 'This phone number is already registered to another user' });
+        }
+        fields.push('phone = ?');
+        values.push(cleanPhone);
       }
-      const existingPhone = await query('SELECT id FROM users WHERE phone = ? AND id != ?', [cleanPhone, userId]);
-      if (existingPhone.length > 0) {
-        return res.status(400).json({ message: 'This phone number is already registered to another user' });
-      }
-      fields.push('phone = ?');
-      values.push(cleanPhone);
     }
 
     // Email update

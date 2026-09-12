@@ -28,6 +28,7 @@ export default function Profile() {
   const { user, updateUser } = useAuth();
   const [form, setForm] = useState({
     name: user?.name || '',
+    phone: user?.phone || '',
     email: user?.email || '',
     avatar: user?.avatar || '',
     address: user?.address || '',
@@ -38,6 +39,22 @@ export default function Profile() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setForm(prev => ({
+        ...prev,
+        name: user.name || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        avatar: user.avatar || '',
+        address: user.address || '',
+        locality: user.locality || '',
+        experience: user.experience || 0,
+        hospital: user.hospital || '',
+      }));
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     const val = e.target.type === 'number' ? Number(e.target.value) : e.target.value;
@@ -194,16 +211,26 @@ export default function Profile() {
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1.25rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Personal Details</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Qualifications and role parameters are cryptographically verified and locked</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Manage your personal credentials, contact info, and clinic address</p>
             </div>
 
             {/* Editable Fields: Phone, Email & Role info */}
             <div className="grid grid-2" style={{ marginBottom: '0.5rem' }}>
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Phone size={14} /> Phone Number <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(Locked)</span>
+                  <Phone size={14} /> Phone Number <span style={{ color: 'var(--accent-primary)', fontWeight: 500, fontSize: '0.72rem' }}>(Editable)</span>
                 </label>
-                <input type="text" className="form-input" value={user?.phone || 'Not set'} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                <input
+                  type="tel"
+                  className="form-input"
+                  name="phone"
+                  placeholder="Enter 10-digit mobile number"
+                  value={form.phone || ''}
+                  onChange={handleChange}
+                  maxLength={10}
+                  pattern="[6-9][0-9]{9}"
+                  title="Enter a valid 10-digit mobile number"
+                />
               </div>
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
