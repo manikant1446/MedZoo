@@ -18,15 +18,19 @@ axios.interceptors.request.use((config) => {
 });
 
 // Axios interceptor: handle 401 responses globally (auto-logout)
+// Only logout when token itself is invalid — not for resource-level 401s
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('medzoo_token');
-      localStorage.removeItem('medzoo_user');
-      // Only redirect if not already on login/register
-      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-        window.location.href = '/login';
+      const msg = (error.response?.data?.message || '').toLowerCase();
+      // Only force-logout for actual token failures (not permission denials)
+      if (msg.includes('token') || msg.includes('no token') || msg.includes('not authorized, no')) {
+        localStorage.removeItem('medzoo_token');
+        localStorage.removeItem('medzoo_user');
+        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
