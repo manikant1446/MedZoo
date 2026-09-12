@@ -94,6 +94,21 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Fetch latest profile from server on mount
+  useEffect(() => {
+    const fetchLatestProfile = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/auth/me`);
+        if (res.data) {
+          updateUser(res.data);
+        }
+      } catch (err) {
+        // Silently use existing user state
+      }
+    };
+    fetchLatestProfile();
+  }, []);
+
   useEffect(() => {
     if (user) {
       setForm(prev => ({
@@ -108,9 +123,9 @@ export default function Profile() {
         hospital: user.hospital || '',
         specialty: user.specialty || '',
         qualifications: user.qualifications || '',
-        age: user.age || '',
+        age: user.age ?? '',
         gender: user.gender || '',
-        bloodGroup: user.bloodGroup || ''
+        bloodGroup: user.bloodGroup || user.blood_group || ''
       }));
     }
   }, [user]);

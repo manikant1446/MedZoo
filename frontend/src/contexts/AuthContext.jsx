@@ -61,6 +61,15 @@ export function AuthProvider({ children }) {
     if (stored && token) {
       setUser(JSON.parse(stored));
       refreshStaffAssignments();
+
+      // Sync fresh profile data from DB
+      axios.get(`${API_BASE_URL}/auth/me`)
+        .then((res) => {
+          if (res.data) {
+            updateUser(res.data);
+          }
+        })
+        .catch(() => {});
     }
     setLoading(false);
   }, []);
