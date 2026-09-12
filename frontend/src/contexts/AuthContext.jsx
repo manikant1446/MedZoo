@@ -17,20 +17,25 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-// Axios interceptor: handle 401 responses globally (auto-logout)
-// IMPORTANT: background/non-critical endpoints should use native fetch to avoid triggering this
-const SKIP_LOGOUT_URLS = ['/auth/staff-assignments', '/auth/me'];
+// Axios interceptor: handle 401 responses globally
+// Only auto-logout when the token itself is rejected (on /auth/ endpoints OR 
+// when the error message explicitly says token failed/not authorized)
+// Do NOT logout for resource 401s (e.g. /consultations, /patients, etc.)
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Don't logout for background sync endpoints
       const url = error.config?.url || '';
-      const isBackgroundSync = SKIP_LOGOUT_URLS.some(skip => url.includes(skip));
-      if (!isBackgroundSync) {
+      const msg = (error.response?.data?.message || '').toLowerCase();
+      // Only force-logout for genuine token failures, not resource access denials
+      const isTokenFailure = 
+        msg.includes('token failed') || 
+        msg.includes('no token') || 
+        msg.includes('not authorized, token') ||
+        (url.includes('/auth/login') || url.includes('/auth/register'));
+      if (isTokenFailure) {
         localStorage.removeItem('medzoo_token');
         localStorage.removeItem('medzoo_user');
-        // Only redirect if not already on login/register
         if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
           window.location.href = '/login';
         }
