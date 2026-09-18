@@ -23,22 +23,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import GoogleAuthButton from './GoogleAuthButton';
 
 const SPECIALTY_OPTIONS = [
-  'General Physician',
+  'General',
   'Cardiologist',
   'Dermatologist',
   'Neurologist',
-  'Orthopedic Surgeon',
-  'Pediatrician',
-  'Gynecologist & Obstetrician',
-  'ENT Specialist',
-  'Ophthalmologist',
   'Psychiatrist',
-  'Pulmonologist',
-  'Gastroenterologist',
-  'Endocrinologist',
   'Dentist',
-  'Urologist',
-  'Oncologist',
   'Other'
 ];
 
@@ -411,12 +401,12 @@ export default function Register() {
               {/* Custom specialty if 'Other' selected */}
               {form.specialty === 'Other' && (
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label>Specify Specialty <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
+                  <label>Specify Medical Specialty <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
                   <input
                     type="text"
                     className="form-input"
                     name="customSpecialty"
-                    placeholder="e.g. Rheumatologist, Nephrologist"
+                    placeholder="type speciality"
                     value={form.customSpecialty}
                     onChange={handleChange}
                     required

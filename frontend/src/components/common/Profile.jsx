@@ -33,22 +33,12 @@ import { API_BASE_URL } from '../../config';
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const SPECIALTY_OPTIONS = [
-  'General Physician',
+  'General',
   'Cardiologist',
   'Dermatologist',
   'Neurologist',
-  'Orthopedic Surgeon',
-  'Pediatrician',
-  'Gynecologist & Obstetrician',
-  'ENT Specialist',
-  'Ophthalmologist',
   'Psychiatrist',
-  'Pulmonologist',
-  'Gastroenterologist',
-  'Endocrinologist',
   'Dentist',
-  'Urologist',
-  'Oncologist',
   'Other'
 ];
 
@@ -1161,7 +1151,7 @@ export default function Profile() {
                           className="form-input"
                           value={customSpecialty}
                           onChange={handleCustomSpecialtyChange}
-                          placeholder="e.g. Rheumatologist, Nephrologist, Radiologist"
+                          placeholder="type speciality"
                           required
                         />
                       </div>

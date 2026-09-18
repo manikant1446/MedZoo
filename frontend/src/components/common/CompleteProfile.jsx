@@ -26,22 +26,12 @@ import { API_BASE_URL } from '../../config';
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const SPECIALTY_OPTIONS = [
-  'General Physician',
+  'General',
   'Cardiologist',
   'Dermatologist',
   'Neurologist',
-  'Orthopedic Surgeon',
-  'Pediatrician',
-  'Gynecologist & Obstetrician',
-  'ENT Specialist',
-  'Ophthalmologist',
   'Psychiatrist',
-  'Pulmonologist',
-  'Gastroenterologist',
-  'Endocrinologist',
   'Dentist',
-  'Urologist',
-  'Oncologist',
   'Other'
 ];
 
@@ -488,13 +478,13 @@ export default function CompleteProfile() {
             {form.specialty === 'Other' && (
               <div className="form-group" style={{ margin: 0 }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                  Specify Specialty <span style={{ color: '#ef4444' }}>*</span>
+                  Specify Medical Specialty <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
                   type="text"
                   className="form-input"
                   name="customSpecialty"
-                  placeholder="e.g. Pediatric Surgeon, Immunologist"
+                  placeholder="type speciality"
                   value={form.customSpecialty}
                   onChange={handleChange}
                   required
