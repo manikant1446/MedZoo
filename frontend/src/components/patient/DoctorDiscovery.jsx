@@ -227,12 +227,43 @@ export default function DoctorDiscovery() {
 
                   {(apt.status === 'pending' || apt.status === 'confirmed') && (
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                      <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([apt.doctorId?.address, apt.doctorId?.locality, apt.doctorId?.hospital || 'Doctor Clinic'].filter(Boolean).join(', '))}`}
-                         target="_blank" rel="noopener noreferrer"
-                         className="btn btn-secondary btn-sm"
-                         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-secondary)', borderColor: 'rgba(34,211,238,0.2)' }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-secondary)', borderColor: 'rgba(34,211,238,0.2)' }}
+                        onClick={() => {
+                          const destination = encodeURIComponent(
+                            [apt.doctorId?.address, apt.doctorId?.locality, apt.doctorId?.hospital || 'Doctor Clinic'].filter(Boolean).join(', ')
+                          );
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                              (position) => {
+                                const { latitude, longitude } = position.coords;
+                                window.open(
+                                  `https://www.google.com/maps/dir/?api=1&origin=${latitude},${longitude}&destination=${destination}`,
+                                  '_blank'
+                                );
+                              },
+                              (error) => {
+                                // If user denies or error occurs, open without origin (Google Maps will ask)
+                                console.warn('Location permission denied:', error.message);
+                                window.open(
+                                  `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
+                                  '_blank'
+                                );
+                              },
+                              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                            );
+                          } else {
+                            // Geolocation not supported, fallback
+                            window.open(
+                              `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
+                              '_blank'
+                            );
+                          }
+                        }}
+                      >
                         <MapPin size={14} /> Get Directions
-                      </a>
+                      </button>
                       <button className="btn btn-sm btn-ghost" style={{ color: 'var(--accent-danger)' }}
                         onClick={() => cancelAppointment(apt._id)}>
                         <X size={14} /> Cancel
