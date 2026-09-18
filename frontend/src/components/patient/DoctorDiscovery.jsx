@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Star, Users, ShieldCheck, Calendar, Clock, X, CheckCircle, ChevronLeft, MapPin } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 
 export default function DoctorDiscovery() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isAppointmentsTab = searchParams.get('tab') === 'appointments';
   const [doctors, setDoctors] = useState([]);
   const [search, setSearch] = useState('');
   const [specialty, setSpecialty] = useState('');
@@ -21,7 +24,27 @@ export default function DoctorDiscovery() {
 
   // My Appointments
   const [myAppointments, setMyAppointments] = useState([]);
-  const [showAppointments, setShowAppointments] = useState(false);
+  const [showAppointments, setShowAppointments] = useState(isAppointmentsTab);
+
+  // Sync tab with URL search params
+  useEffect(() => {
+    if (isAppointmentsTab) {
+      setShowAppointments(true);
+      fetchMyAppointments();
+    } else {
+      setShowAppointments(false);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (show) => {
+    setShowAppointments(show);
+    if (show) {
+      fetchMyAppointments();
+      setSearchParams({ tab: 'appointments' });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   // Appointment Rating states
   const [ratingAppointment, setRatingAppointment] = useState(null);
@@ -135,14 +158,66 @@ export default function DoctorDiscovery() {
 
   return (
     <div className="page animate-in">
-      <div className="page-header flex-between">
-        <div>
-          <h1>Find Doctors</h1>
-          <p>Find specialist doctors, check availability, and book appointments</p>
+      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+          <h1 style={{ margin: 0 }}>Find Doctors</h1>
+
+          {/* View Option Pills Right Next to Find Doctors */}
+          <div style={{
+            display: 'inline-flex',
+            background: 'var(--bg-secondary)',
+            padding: '3px',
+            borderRadius: 'var(--radius-full)',
+            border: '1px solid var(--border)'
+          }}>
+            <button
+              type="button"
+              onClick={() => handleTabChange(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.35rem 0.85rem',
+                borderRadius: 'var(--radius-full)',
+                border: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                background: !showAppointments ? 'var(--accent-primary)' : 'transparent',
+                color: !showAppointments ? 'white' : 'var(--text-secondary)',
+                transition: 'all 0.2s'
+              }}
+            >
+              Find Doctors
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.35rem 0.85rem',
+                borderRadius: 'var(--radius-full)',
+                border: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                background: showAppointments ? 'var(--accent-primary)' : 'transparent',
+                color: showAppointments ? 'white' : 'var(--text-secondary)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Calendar size={13} />
+              My Appointments
+            </button>
+          </div>
         </div>
-        <button className="btn btn-secondary" onClick={() => { setShowAppointments(!showAppointments); if (!showAppointments) fetchMyAppointments(); }}>
-          <Calendar size={16} /> {showAppointments ? 'Find Doctors' : 'My Appointments'}
-        </button>
+        <p style={{ margin: 0, color: 'var(--text-muted)' }}>
+          {showAppointments
+            ? 'View and manage all your scheduled clinic appointments'
+            : 'Find specialist doctors, check availability, and book appointments'}
+        </p>
       </div>
 
       {/* My Appointments View */}

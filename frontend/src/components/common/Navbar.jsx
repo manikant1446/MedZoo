@@ -90,7 +90,18 @@ export default function Navbar() {
           {role === 'patient' && (
             <>
               <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
-              <Link to="/discover" className={location.pathname === '/discover' ? 'active' : ''}>Find Doctors</Link>
+              <Link
+                to="/discover"
+                className={location.pathname === '/discover' && !location.search.includes('appointments') ? 'active' : ''}
+              >
+                Find Doctors
+              </Link>
+              <Link
+                to="/discover?tab=appointments"
+                className={location.pathname === '/discover' && location.search.includes('appointments') ? 'active' : ''}
+              >
+                My Appointments
+              </Link>
               {isClinicStaff && (
                 <Link
                   to="/appointments"
