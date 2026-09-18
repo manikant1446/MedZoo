@@ -34,7 +34,6 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const SPECIALTY_OPTIONS = [
   'General Physician',
-  'General',
   'Cardiologist',
   'Dermatologist',
   'Neurologist',
@@ -210,6 +209,14 @@ export default function Profile() {
     if (e) e.preventDefault();
     setSuccess('');
     setError('');
+
+    if (user?.role === 'doctor') {
+      if (selectedSpecialty === 'Other' && !customSpecialty.trim()) {
+        setError('Please specify your custom medical specialty.');
+        return;
+      }
+    }
+
     setSaving(true);
 
     try {
@@ -1147,7 +1154,7 @@ export default function Profile() {
                     {selectedSpecialty === 'Other' && (
                       <div className="form-group" style={{ margin: 0 }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                          <Stethoscope size={14} /> Specify Custom Specialty
+                          <Stethoscope size={14} /> Specify Medical Specialty <span style={{ color: '#ef4444' }}>*</span>
                         </label>
                         <input
                           type="text"
