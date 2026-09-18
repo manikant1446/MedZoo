@@ -32,6 +32,27 @@ import { API_BASE_URL } from '../../config';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
+const SPECIALTY_OPTIONS = [
+  'General Physician',
+  'General',
+  'Cardiologist',
+  'Dermatologist',
+  'Neurologist',
+  'Orthopedic Surgeon',
+  'Pediatrician',
+  'Gynecologist & Obstetrician',
+  'ENT Specialist',
+  'Ophthalmologist',
+  'Psychiatrist',
+  'Pulmonologist',
+  'Gastroenterologist',
+  'Endocrinologist',
+  'Dentist',
+  'Urologist',
+  'Oncologist',
+  'Other'
+];
+
 const PRESET_AVATARS = [
   {
     name: 'Doctor (Male)',
@@ -93,6 +114,10 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Doctor specialty selection state
+  const [selectedSpecialty, setSelectedSpecialty] = useState('');
+  const [customSpecialty, setCustomSpecialty] = useState('');
+
   useEffect(() => {
     if (user) {
       setForm(prev => ({
@@ -111,8 +136,36 @@ export default function Profile() {
         gender: user.gender || '',
         bloodGroup: user.bloodGroup || ''
       }));
+
+      const userSpec = user.specialty || '';
+      if (SPECIALTY_OPTIONS.includes(userSpec) && userSpec !== 'Other') {
+        setSelectedSpecialty(userSpec);
+        setCustomSpecialty('');
+      } else if (userSpec) {
+        setSelectedSpecialty('Other');
+        setCustomSpecialty(userSpec);
+      } else {
+        setSelectedSpecialty('');
+        setCustomSpecialty('');
+      }
     }
   }, [user]);
+
+  const handleSpecialtySelect = (e) => {
+    const val = e.target.value;
+    setSelectedSpecialty(val);
+    if (val === 'Other') {
+      setForm(prev => ({ ...prev, specialty: customSpecialty }));
+    } else {
+      setForm(prev => ({ ...prev, specialty: val }));
+    }
+  };
+
+  const handleCustomSpecialtyChange = (e) => {
+    const val = e.target.value;
+    setCustomSpecialty(val);
+    setForm(prev => ({ ...prev, specialty: val }));
+  };
 
   const handleChange = (e) => {
     const val = e.target.type === 'number' ? Number(e.target.value) : e.target.value;
@@ -160,8 +213,10 @@ export default function Profile() {
     setSaving(true);
 
     try {
+      const finalSpecialty = selectedSpecialty === 'Other' ? customSpecialty.trim() : (selectedSpecialty || form.specialty);
       const res = await axios.put(`${API_BASE_URL}/auth/profile`, {
         ...form,
+        specialty: finalSpecialty,
         email: form.email || null,
         phone: form.phone || null
       });
@@ -1059,16 +1114,19 @@ export default function Profile() {
                     <div className="grid grid-2">
                       <div className="form-group" style={{ margin: 0 }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                          <Award size={14} /> Medical Specialty
+                          <Stethoscope size={14} /> Medical Specialty
                         </label>
-                        <input
-                          type="text"
+                        <select
                           name="specialty"
-                          className="form-input"
-                          value={form.specialty}
-                          onChange={handleChange}
-                          placeholder="e.g. Cardiologist, Neurologist, General"
-                        />
+                          className="form-select"
+                          value={selectedSpecialty}
+                          onChange={handleSpecialtySelect}
+                        >
+                          <option value="">Select Medical Specialty</option>
+                          {SPECIALTY_OPTIONS.map((spec) => (
+                            <option key={spec} value={spec}>{spec}</option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="form-group" style={{ margin: 0 }}>
@@ -1085,6 +1143,22 @@ export default function Profile() {
                         />
                       </div>
                     </div>
+
+                    {selectedSpecialty === 'Other' && (
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                          <Stethoscope size={14} /> Specify Custom Specialty
+                        </label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={customSpecialty}
+                          onChange={handleCustomSpecialtyChange}
+                          placeholder="e.g. Rheumatologist, Nephrologist, Radiologist"
+                          required
+                        />
+                      </div>
+                    )}
 
                     <div className="grid grid-2">
                       <div className="form-group" style={{ margin: 0 }}>
