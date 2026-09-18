@@ -520,11 +520,7 @@ export default function AppointmentManager() {
                           )}
                         </div>
 
-                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>
-                          ID: {apt.patientId?._id}
-                        </p>
-
-                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-secondary)', flexWrap: 'wrap', marginTop: '0.35rem' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                             <Calendar size={13} color="var(--accent-primary)" /> {formatDate(apt.date)}
                           </span>
