@@ -558,19 +558,12 @@ export default function AppointmentManager() {
                       {apt.status !== 'cancelled' && (
                         <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', width: '100%', marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
                           {isPending && (
-                            <>
-                              <button
-                                className="btn btn-sm"
-                                style={{ background: 'var(--gradient-success)', color: 'white' }}
-                                onClick={() => updateStatus(apt._id, 'confirmed')}>
-                                Approve
-                              </button>
-                              <button
-                                className="btn btn-sm btn-secondary"
-                                onClick={() => updateStatus(apt._id, 'in-progress')}>
-                                Start Visit
-                              </button>
-                            </>
+                            <button
+                              className="btn btn-sm"
+                              style={{ background: 'var(--gradient-success)', color: 'white' }}
+                              onClick={() => updateStatus(apt._id, 'confirmed')}>
+                              Approve
+                            </button>
                           )}
                           {(isConfirmed || isInProgress) && (
                             <>
