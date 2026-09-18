@@ -158,62 +158,9 @@ export default function DoctorDiscovery() {
 
   return (
     <div className="page animate-in">
-      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-          <h1 style={{ margin: 0 }}>Find Doctors</h1>
-
-          {/* View Option Pills Right Next to Find Doctors */}
-          <div style={{
-            display: 'inline-flex',
-            background: 'var(--bg-secondary)',
-            padding: '3px',
-            borderRadius: 'var(--radius-full)',
-            border: '1px solid var(--border)'
-          }}>
-            <button
-              type="button"
-              onClick={() => handleTabChange(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.35rem 0.85rem',
-                borderRadius: 'var(--radius-full)',
-                border: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                background: !showAppointments ? 'var(--accent-primary)' : 'transparent',
-                color: !showAppointments ? 'white' : 'var(--text-secondary)',
-                transition: 'all 0.2s'
-              }}
-            >
-              Find Doctors
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.35rem 0.85rem',
-                borderRadius: 'var(--radius-full)',
-                border: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                background: showAppointments ? 'var(--accent-primary)' : 'transparent',
-                color: showAppointments ? 'white' : 'var(--text-secondary)',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Calendar size={13} />
-              My Appointments
-            </button>
-          </div>
-        </div>
-        <p style={{ margin: 0, color: 'var(--text-muted)' }}>
+      <div className="page-header">
+        <h1>{showAppointments ? 'My Appointments' : 'Find Doctors'}</h1>
+        <p>
           {showAppointments
             ? 'View and manage all your scheduled clinic appointments'
             : 'Find specialist doctors, check availability, and book appointments'}
