@@ -112,27 +112,27 @@
 
 ```mermaid
 flowchart TD
-    A["🔐 1. Register / Google Login<br/><sub>Google OAuth or Phone/Password</sub>"]
-    B["🔍 2. Discover Doctors<br/><sub>Filter Specialty & Locality</sub>"]
-    C["📅 3. Real-Time Slot Picker<br/><sub>Live 30-Min Availability</sub>"]
-    D{"⚡ 4. Booking Type"}
-    D1["🩺 Scheduled Consultation<br/><sub>Confirmed Slot Booking</sub>"]
-    D2["🚨 Emergency Walk-In<br/><sub>Priority Urgent Care</sub>"]
-    E["📍 5. 1-Tap GPS Directions<br/><sub>Turn-by-Turn Route to Clinic</sub>"]
-    F["🏥 6. Doctor Consultation<br/><sub>Diagnosis & Clinical Notes</sub>"]
-    G["💊 7. Digital Prescription<br/><sub>Rx Medicines, Dosages & PDF</sub>"]
-    H["⭐ 8. Rate & Review<br/><sub>1–5 Star Doctor Feedback</sub>"]
+    A["🔐 1. Register / Login<br/>OAuth or Phone"]
+    B["🔍 2. Find Doctors<br/>Specialty & City"]
+    C["📅 3. Slot Picker<br/>30-Min Live Slots"]
+    D{"Booking?"}
+    D1["🩺 Scheduled Visit<br/>Confirmed Slot"]
+    D2["🚨 Emergency<br/>Priority Care"]
+    E["📍 5. GPS Route<br/>Navigate Clinic"]
+    F["🏥 6. Consultation<br/>Diagnosis & Notes"]
+    G["💊 7. Digital Rx<br/>Medicines & PDF"]
+    H["⭐ 8. Rate Doctor<br/>1–5 Star Review"]
 
-    A -->|"👤 User Identity & JWT Token"| B
-    B -->|"👨‍⚕️ Selected Doctor & Clinic"| C
-    C -->|"🗓️ Date & Preferred Slot"| D
-    D -->|"Regular Booking"| D1
-    D -->|"Urgent Flag"| D2
-    D1 -->|"🔔 Real-Time Booking Alert"| E
-    D2 -->|"🚨 High-Priority Emergency Alert"| E
-    E -->|"📍 Live Patient GPS Coords"| F
-    F -->|"📋 Diagnosis & Care Plan"| G
-    G -->|"⭐ Post-Visit Rating (Updates Doctor Score)"| H
+    A -->|"Auth Token"| B
+    B -->|"Pick Doctor"| C
+    C -->|"Date & Time"| D
+    D -->|"Regular"| D1
+    D -->|"Urgent"| D2
+    D1 -->|"Booking Alert"| E
+    D2 -->|"Priority Alert"| E
+    E -->|"Patient GPS"| F
+    F -->|"Prescription"| G
+    G -->|"Doctor Rating"| H
 
     style A fill:#7C4DFF,color:#fff,stroke:#5E35B1,stroke-width:2px
     style B fill:#536DFE,color:#fff,stroke:#3949AB,stroke-width:2px
@@ -152,24 +152,24 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["🏥 1. Setup Clinic Profile<br/><sub>Hospital, Specialty, Fees, Address</sub>"]
-    B["🔔 2. Real-Time Patient Stream<br/><sub>Instant WebSocket Notifications</sub>"]
-    C["📅 3. Today's Appointment Queue<br/><sub>Live Status: Confirmed / Pending</sub>"]
-    D{"📋 4. Clinical Decision"}
-    D1["💊 5. Write Digital Rx<br/><sub>Multi-Medicine Builder & Notes</sub>"]
-    D2["🤝 6. Specialist Referral<br/><sub>Priority Tag: Low ➔ Critical</sub>"]
-    E["👩‍💼 7. Delegate Clinic Staff<br/><sub>Send Invite Token to Receptionist</sub>"]
-    F["📊 8. Live Analytics Studio<br/><sub>Patient Trends, Peak Hours & Ratings</sub>"]
+    A["🏥 1. Clinic Setup<br/>Specialty & Hospital"]
+    B["🔔 2. Live Alerts<br/>Incoming Patients"]
+    C["📅 3. Today's Queue<br/>Pending & Confirmed"]
+    D{"Next Step?"}
+    D1["💊 4. Digital Rx<br/>Medicines & Advice"]
+    D2["🤝 5. Referral<br/>Specialist Transfer"]
+    E["👩‍💼 6. Clinic Staff<br/>Invite Receptionist"]
+    F["📊 7. Analytics<br/>Trends & Ratings"]
 
-    A -->|"🏥 Clinic & Specialty Data"| B
-    B -->|"⚡ Real-Time Booking Updates"| C
-    C -->|"🔍 Patient Medical History"| D
-    D -->|"Direct Treatment"| D1
-    D -->|"Complex Case"| D2
-    D1 -->|"💾 Stored in Patient Records & PDF"| F
-    D2 -->|"📤 Real-Time Transfer to Target Doctor"| F
-    A -->|"🔑 Secure Staff Token"| E
-    E -->|"🤝 Linked Receptionist Access"| C
+    A -->|"Clinic Data"| B
+    B -->|"New Booking"| C
+    C -->|"Patient Info"| D
+    D -->|"Treat"| D1
+    D -->|"Refer"| D2
+    D1 -->|"Save History"| F
+    D2 -->|"Send Referral"| F
+    A -->|"Staff Token"| E
+    E -->|"Linked Access"| C
 
     style A fill:#E91E63,color:#fff,stroke:#C2185B,stroke-width:2px
     style B fill:#FF4081,color:#fff,stroke:#F50057,stroke-width:2px
@@ -187,24 +187,24 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["📩 1. Receive Invite Link<br/><sub>One-Time Token via Email / SMS</sub>"]
-    B["🔐 2. Register & Verify<br/><sub>Auto-Linked to Doctor's Clinic</sub>"]
-    C["🖥️ 3. Reception Desk Portal<br/><sub>Synchronized Live Queue Dashboard</sub>"]
-    D{"⚡ 4. Patient Arrival"}
-    D1["🩺 Scheduled Check-In<br/><sub>Mark Status: 'In-Progress'</sub>"]
-    D2["🚨 Emergency Walk-In<br/><sub>Urgent Flag + Instant Alert</sub>"]
-    E["💳 5. Payment Collection<br/><sub>Toggle Status: Unpaid ➔ Paid</sub>"]
-    F["✅ 6. Chamber Handoff<br/><sub>Send Patient to Doctor's Desk</sub>"]
+    A["📩 1. Receive Invite<br/>Token via Link"]
+    B["🔐 2. Register<br/>Linked to Clinic"]
+    C["🖥️ 3. Reception Desk<br/>Live Queue Portal"]
+    D{"Patient?"}
+    D1["🩺 Check-In<br/>In-Progress"]
+    D2["🚨 Emergency<br/>Priority Alert"]
+    E["💳 5. Billing<br/>Mark Paid"]
+    F["✅ 6. Handoff<br/>Doctor Chamber"]
 
-    A -->|"🔑 Verification Token"| B
-    B -->|"🏥 Doctor-Staff Association"| C
-    C -->|"📋 Daily Booking Roster"| D
-    D -->|"Pre-booked Visit"| D1
-    D -->|"Direct Walk-In"| D2
-    D1 -->|"💵 Fee Collection"| E
-    D2 -->|"🚨 High-Priority Queue Bump"| E
-    E -->|"🔔 Real-Time Consultation Handshake"| F
-    F -.->|"🔄 Synchronized Queue"| C
+    A -->|"Invite Token"| B
+    B -->|"Staff Access"| C
+    C -->|"Daily Queue"| D
+    D -->|"Pre-booked"| D1
+    D -->|"Walk-In"| D2
+    D1 -->|"Collect Fee"| E
+    D2 -->|"Urgent Queue"| E
+    E -->|"Ready Alert"| F
+    F -.->|"Sync Queue"| C
 
     style A fill:#7C4DFF,color:#fff,stroke:#5E35B1,stroke-width:2px
     style B fill:#536DFE,color:#fff,stroke:#3949AB,stroke-width:2px
@@ -467,33 +467,33 @@ graph TB
 
 ```mermaid
 flowchart TD
-    U["👤 USERS<br/><sub>Patients, Doctors & Staff</sub>"]
-    INV["📩 INVITATIONS<br/><sub>One-Time Staff Tokens</sub>"]
-    DS["🔗 DOCTOR_STAFF<br/><sub>Clinic ➔ Staff Mapping</sub>"]
-    A["📅 APPOINTMENTS<br/><sub>Slots & Anti-Double-Booking</sub>"]
-    N["🔔 NOTIFICATIONS<br/><sub>WebSocket Real-Time Bus</sub>"]
-    C["📋 CONSULTATIONS<br/><sub>Clinical Diagnoses & Notes</sub>"]
-    RX["💊 PRESCRIPTIONS<br/><sub>Medicines & Dosages</sub>"]
-    R["🤝 REFERRALS<br/><sub>Inter-Doctor Cases</sub>"]
-    CNT["👥 CONTACTS<br/><sub>Trusted Doctor Network</sub>"]
+    U["👤 USERS<br/>Patients, Doctors, Staff"]
+    INV["📩 INVITATIONS<br/>Staff Tokens"]
+    DS["🔗 DOCTOR_STAFF<br/>Doctor-Staff Link"]
+    A["📅 APPOINTMENTS<br/>Slots & Bookings"]
+    N["🔔 NOTIFICATIONS<br/>Real-Time Alerts"]
+    C["📋 CONSULTATIONS<br/>Clinical Notes"]
+    RX["💊 PRESCRIPTIONS<br/>Medicines & Doses"]
+    R["🤝 REFERRALS<br/>Specialist Cases"]
+    CNT["👥 CONTACTS<br/>Doctor Network"]
 
-    U -->|"🔑 Doctor generates invite"| INV
-    INV -->|"✅ Staff accepts token"| DS
-    DS -->|"🏥 Links staff to doctor"| U
+    U -->|"Generate Invite"| INV
+    INV -->|"Accept Token"| DS
+    DS -->|"Link Staff"| U
 
-    U -->|"📅 Patient books slot"| A
-    A -->|"⚡ Triggers real-time alert"| N
-    N -.->|"📲 Socket.IO push"| U
+    U -->|"Book Slot"| A
+    A -->|"New Booking"| N
+    N -.->|"Push Alert"| U
 
-    A -->|"🩺 Completed visit"| C
-    C -->|"💊 Prescribed medicines"| RX
+    A -->|"Visit Done"| C
+    C -->|"Add Medicines"| RX
 
-    A -->|"⭐ Patient rates visit (1-5★)"| U
+    A -->|"Rate 1-5★"| U
 
-    C -->|"🚨 Specialist needed"| R
-    R -->|"📨 Alert target doctor"| N
+    C -->|"Refer Case"| R
+    R -->|"Alert Doctor"| N
 
-    U -.->|"🤝 Peer collaboration"| CNT
+    U -.->|"Add Peer"| CNT
 
     style U fill:#7C4DFF,color:#fff,stroke:#5E35B1,stroke-width:2px
     style INV fill:#536DFE,color:#fff,stroke:#3949AB,stroke-width:2px
