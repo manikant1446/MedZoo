@@ -104,260 +104,116 @@
 
 <br />
 
-## 🔄 How It Works — 2D Dynamic Workflows & Data Flow
+## 🔄 How It Works — User Workflow & 2D Data Flow
 
 <br />
 
-### 🧑‍💻 1. Patient Journey — End-to-End Data Flow
+### 🧑‍💻 Patient Journey
 
 ```mermaid
 flowchart TD
-    subgraph CLIENT ["📱 Patient Client (React SPA)"]
-        P_AUTH["1️⃣ Authentication<br/>Google 1-Tap OAuth or Email/Password"]
-        P_SEARCH["2️⃣ Doctor Discovery<br/>Filter Specialty, Name, Locality"]
-        P_SLOTS["3️⃣ Slot Picker<br/>Query 30-min live availability"]
-        P_BOOK["4️⃣ Book Appointment<br/>Reason, notes, emergency flag"]
-        P_GPS["5️⃣ Clinic Directions<br/>Geolocation API lat/lng coordinates"]
-        P_RATE["6️⃣ Rate & Review<br/>1 to 5 star rating post-consultation"]
-        P_HIST["7️⃣ Medical History<br/>Digital Rx, diagnoses, PDFs"]
-    end
+    A["🔐 1. Register / Google Login<br/><sub>Google OAuth or Phone/Password</sub>"]
+    B["🔍 2. Discover Doctors<br/><sub>Filter Specialty & Locality</sub>"]
+    C["📅 3. Real-Time Slot Picker<br/><sub>Live 30-Min Availability</sub>"]
+    D{"⚡ 4. Booking Type"}
+    D1["🩺 Scheduled Consultation<br/><sub>Confirmed Slot Booking</sub>"]
+    D2["🚨 Emergency Walk-In<br/><sub>Priority Urgent Care</sub>"]
+    E["📍 5. 1-Tap GPS Directions<br/><sub>Turn-by-Turn Route to Clinic</sub>"]
+    F["🏥 6. Doctor Consultation<br/><sub>Diagnosis & Clinical Notes</sub>"]
+    G["💊 7. Digital Prescription<br/><sub>Rx Medicines, Dosages & PDF</sub>"]
+    H["⭐ 8. Rate & Review<br/><sub>1–5 Star Doctor Feedback</sub>"]
 
-    subgraph API ["⚡ Express.js API Gateway"]
-        E_AUTH["POST /api/auth/google<br/>POST /api/auth/login"]
-        E_DOCS["GET /api/doctors?specialty=..."]
-        E_SLOTS["GET /api/appointments/slots/:id/:date"]
-        E_BOOK["POST /api/appointments"]
-        E_RATE["POST /api/appointments/:id/rate"]
-        E_HIST["GET /api/consultations/patient/:id"]
-    end
+    A -->|"👤 User Identity & JWT Token"| B
+    B -->|"👨‍⚕️ Selected Doctor & Clinic"| C
+    C -->|"🗓️ Date & Preferred Slot"| D
+    D -->|"Regular Booking"| D1
+    D -->|"Urgent Flag"| D2
+    D1 -->|"🔔 Real-Time Booking Alert"| E
+    D2 -->|"🚨 High-Priority Emergency Alert"| E
+    E -->|"📍 Live Patient GPS Coords"| F
+    F -->|"📋 Diagnosis & Care Plan"| G
+    G -->|"⭐ Post-Visit Rating (Updates Doctor Score)"| H
 
-    subgraph DB ["🗄️ MySQL Database Engine"]
-        T_USERS[("users<br/>id, name, email, role, rating")]
-        T_APPTS[("appointments<br/>UNIQUE(doctor_id, date, time_slot)<br/>status: pending / confirmed")]
-        T_CONS[("consultations<br/>diagnosis, category, notes")]
-        T_RX[("prescriptions<br/>medicine, dosage, duration")]
-        T_NOTIF[("notifications<br/>user_id, type, message, is_read")]
-    end
-
-    subgraph SERVICES ["🌐 Real-Time & External APIs"]
-        S_GOOGLE["Google OAuth 2.0 API<br/>Token verification"]
-        S_MAPS["Google Maps Navigation<br/>Origin: GPS ➔ Destination: Clinic"]
-        S_WS["Socket.IO Server<br/>Event: appointment:created"]
-    end
-
-    %% Step 1: Auth
-    P_AUTH -->|"Send Google Token / Credentials"| E_AUTH
-    E_AUTH <-->|"Verify ID Token"| S_GOOGLE
-    E_AUTH <-->|"SELECT / INSERT user"| T_USERS
-    E_AUTH -->|"Return JWT + User Profile"| P_AUTH
-
-    %% Step 2: Discovery
-    P_SEARCH -->|"Query: ?specialty=Cardiology"| E_DOCS
-    E_DOCS <-->|"SELECT * FROM users WHERE role='doctor'"| T_USERS
-    E_DOCS -->|"Doctor Profiles, Hospital, Avg Rating"| P_SEARCH
-
-    %% Step 3: Slots
-    P_SEARCH --> P_SLOTS
-    P_SLOTS -->|"Req: doctorId + selectedDate"| E_SLOTS
-    E_SLOTS <-->|"SELECT time_slot FROM appointments WHERE date=?"| T_APPTS
-    E_SLOTS -->|"16 slots array [available: true/false]"| P_SLOTS
-
-    %% Step 4: Booking
-    P_SLOTS --> P_BOOK
-    P_BOOK -->|"Payload: { doctorId, date, timeSlot, isEmergency }"| E_BOOK
-    E_BOOK -->|"INSERT INTO appointments"| T_APPTS
-    E_BOOK -->|"INSERT INTO notifications"| T_NOTIF
-    E_BOOK ==>|"Emit 'appointment:created'"| S_WS
-    S_WS -.->|"Push Real-Time Alert to Doctor & Staff"| CLIENT
-
-    %% Step 5: GPS Navigation
-    P_BOOK --> P_GPS
-    P_GPS -->|"navigator.geolocation.getCurrentPosition()"| S_MAPS
-    S_MAPS -->|"Open Directions: user lat,lng ➔ clinic address"| P_GPS
-
-    %% Step 6: Rating
-    P_GPS --> P_RATE
-    P_RATE -->|"Payload: { rating: 5 }"| E_RATE
-    E_RATE -->|"UPDATE appointments SET rating = 5"| T_APPTS
-    E_RATE -->|"Recalculate users.rating & ratings_count"| T_USERS
-
-    %% Step 7: History & Rx
-    P_HIST -->|"Fetch Patient Consultations"| E_HIST
-    E_HIST <-->|"SELECT consultations JOIN prescriptions"| T_CONS
-    T_CONS -.->|"Include Rx Items"| T_RX
-    E_HIST -->|"Structured Medical Records & Rx History"| P_HIST
-
-    %% Visual Styling
-    style CLIENT fill:#0d1b2a,color:#e0e1dd,stroke:#415a77,stroke-width:2px
-    style API fill:#1b263b,color:#e0e1dd,stroke:#778da9,stroke-width:2px
-    style DB fill:#0f2a1d,color:#e0e1dd,stroke:#2a9d8f,stroke-width:2px
-    style SERVICES fill:#2b1055,color:#e0e1dd,stroke:#9d4edd,stroke-width:2px
+    style A fill:#7C4DFF,color:#fff,stroke:#5E35B1,stroke-width:2px
+    style B fill:#536DFE,color:#fff,stroke:#3949AB,stroke-width:2px
+    style C fill:#00B0FF,color:#fff,stroke:#0091EA,stroke-width:2px
+    style D fill:#00E5FF,color:#000,stroke:#00B8D4,stroke-width:2px
+    style D1 fill:#00E676,color:#000,stroke:#00C853,stroke-width:2px
+    style D2 fill:#FF5252,color:#fff,stroke:#D50000,stroke-width:2px
+    style E fill:#FFD740,color:#000,stroke:#FFC400,stroke-width:2px
+    style F fill:#FF9100,color:#fff,stroke:#FF6D00,stroke-width:2px
+    style G fill:#E040FB,color:#fff,stroke:#AA00FF,stroke-width:2px
+    style H fill:#9C27B0,color:#fff,stroke:#7B1FA2,stroke-width:2px
 ```
 
 <br />
 
-### 👨‍⚕️ 2. Doctor Journey — Clinical & Management Workflow
+### 👨‍⚕️ Doctor Journey
 
 ```mermaid
 flowchart TD
-    subgraph CLINIC_UI ["👨‍⚕️ Doctor Web Dashboard"]
-        D_PROF["1️⃣ Profile Setup<br/>Specialty, Hospital, Qualifications, Address"]
-        D_NOTIF["2️⃣ Real-time Alerts<br/>Audio notification & badge update"]
-        D_QUEUE["3️⃣ Live Appointment Queue<br/>Filter today's patients & emergency cases"]
-        D_DECIDE{"4️⃣ Clinical Decision"}
-        D_TREAT["5️⃣ Rx & Consultation<br/>Diagnosis, category, digital prescription"]
-        D_REF["6️⃣ Case Referral<br/>Refer to specialist with priority tag"]
-        D_STAFF["7️⃣ Clinic Staff Invites<br/>Generate token & delegate queue"]
-        D_STATS["8️⃣ Analytics Studio<br/>Patient trends, disease breakdown, peak hours"]
-    end
+    A["🏥 1. Setup Clinic Profile<br/><sub>Hospital, Specialty, Fees, Address</sub>"]
+    B["🔔 2. Real-Time Patient Stream<br/><sub>Instant WebSocket Notifications</sub>"]
+    C["📅 3. Today's Appointment Queue<br/><sub>Live Status: Confirmed / Pending</sub>"]
+    D{"📋 4. Clinical Decision"}
+    D1["💊 5. Write Digital Rx<br/><sub>Multi-Medicine Builder & Notes</sub>"]
+    D2["🤝 6. Specialist Referral<br/><sub>Priority Tag: Low ➔ Critical</sub>"]
+    E["👩‍💼 7. Delegate Clinic Staff<br/><sub>Send Invite Token to Receptionist</sub>"]
+    F["📊 8. Live Analytics Studio<br/><sub>Patient Trends, Peak Hours & Ratings</sub>"]
 
-    subgraph API_GATEWAY ["⚡ Backend Services & Middleware"]
-        B_PROF["PUT /api/auth/profile"]
-        B_APPTS["GET /api/appointments<br/>PUT /api/appointments/:id/status"]
-        B_CONS["POST /api/consultations<br/>Atomic consultation + Rx builder"]
-        B_REF["POST /api/referrals"]
-        B_INV["POST /api/auth/invite"]
-        B_STATS["GET /api/consultations/analytics"]
-    end
+    A -->|"🏥 Clinic & Specialty Data"| B
+    B -->|"⚡ Real-Time Booking Updates"| C
+    C -->|"🔍 Patient Medical History"| D
+    D -->|"Direct Treatment"| D1
+    D -->|"Complex Case"| D2
+    D1 -->|"💾 Stored in Patient Records & PDF"| F
+    D2 -->|"📤 Real-Time Transfer to Target Doctor"| F
+    A -->|"🔑 Secure Staff Token"| E
+    E -->|"🤝 Linked Receptionist Access"| C
 
-    subgraph MYSQL ["🗄️ MySQL Database Engine"]
-        M_USERS[("users<br/>Doctor info, experience, ratings")]
-        M_APPTS[("appointments<br/>status: in-progress / completed / cancelled")]
-        M_CONS[("consultations<br/>diagnosis, category, notes, consultation_hour")]
-        M_RX[("prescriptions<br/>medicine, dosage, duration")]
-        M_REF[("referrals<br/>from_doctor_id, to_doctor_id, priority")]
-        M_INV[("invitations<br/>phone, token, role='staff', expires_at")]
-    end
-
-    subgraph REALTIME_SVC ["📡 WebSocket & Notification Hub"]
-        WS_HUB["Socket.IO Server<br/>Rooms: doctor_{id}"]
-        MAIL_HUB["Nodemailer (Gmail SMTP)<br/>Staff invite links & OTP delivery"]
-    end
-
-    %% Doctor Profile
-    D_PROF -->|"Submit Clinic Profile & Address"| B_PROF
-    B_PROF -->|"UPDATE users SET hospital, specialty, locality"| M_USERS
-
-    %% Realtime Reception
-    WS_HUB -.->|"appointment:created event"| D_NOTIF
-    D_NOTIF --> D_QUEUE
-    D_QUEUE <-->|"GET /api/appointments?date=today"| B_APPTS
-    B_APPTS <-->|"SELECT * FROM appointments WHERE doctor_id=?"| M_APPTS
-
-    %% Queue Handling & Decision
-    D_QUEUE --> D_DECIDE
-    D_DECIDE -->|"Begin Consultation"| D_TREAT
-    D_DECIDE -->|"Refer to Specialist"| D_REF
-    D_DECIDE -->|"Status: In-Progress / Cancelled"| B_APPTS
-
-    %% Consultation & Prescription Creation
-    D_TREAT -->|"Payload: { patientPhone, diagnosis, category, notes, prescriptions[] }"| B_CONS
-    B_CONS -->|"INSERT INTO consultations (auto-registers new patient if needed)"| M_CONS
-    B_CONS -->|"Batch INSERT INTO prescriptions"| M_RX
-    B_CONS -->|"Sync appointment status = 'completed'"| M_APPTS
-
-    %% Referral Workflow
-    D_REF -->|"Payload: { toDoctorId, patientId, priority: 'critical', reason }"| B_REF
-    B_REF -->|"INSERT INTO referrals"| M_REF
-    B_REF ==>|"Emit 'referral:new' to target doctor"| WS_HUB
-
-    %% Staff Invitation
-    D_STAFF -->|"Payload: { phone, role: 'staff' }"| B_INV
-    B_INV -->|"Generate crypto token ➔ INSERT INTO invitations"| M_INV
-    B_INV -->|"Send Invite URL with token"| MAIL_HUB
-
-    %% Analytics
-    D_STATS -->|"Fetch Aggregated Metrics"| B_STATS
-    B_STATS <-->|"SELECT COUNT(*), category, consultation_hour FROM consultations"| M_CONS
-    B_STATS -->|"Chart.js datasets (Trends line, Disease pie, Hourly bar)"| D_STATS
-
-    %% Styling
-    style CLINIC_UI fill:#1a001a,color:#f3e8ff,stroke:#a855f7,stroke-width:2px
-    style API_GATEWAY fill:#1b263b,color:#e0e1dd,stroke:#778da9,stroke-width:2px
-    style MYSQL fill:#0f2a1d,color:#e0e1dd,stroke:#2a9d8f,stroke-width:2px
-    style REALTIME_SVC fill:#2b1055,color:#e0e1dd,stroke:#ec4899,stroke-width:2px
+    style A fill:#E91E63,color:#fff,stroke:#C2185B,stroke-width:2px
+    style B fill:#FF4081,color:#fff,stroke:#F50057,stroke-width:2px
+    style C fill:#7C4DFF,color:#fff,stroke:#5E35B1,stroke-width:2px
+    style D fill:#536DFE,color:#fff,stroke:#3949AB,stroke-width:2px
+    style D1 fill:#00E676,color:#000,stroke:#00C853,stroke-width:2px
+    style D2 fill:#FF9100,color:#fff,stroke:#FF6D00,stroke-width:2px
+    style E fill:#00BCD4,color:#fff,stroke:#0097A7,stroke-width:2px
+    style F fill:#4CAF50,color:#fff,stroke:#388E3C,stroke-width:2px
 ```
 
 <br />
 
-### 👩‍💼 3. Staff Journey — Reception & Operations Workflow
+### 👩‍💼 Staff Journey
 
 ```mermaid
 flowchart TD
-    subgraph STAFF_PORTAL ["👩‍💼 Staff / Receptionist Desk"]
-        S_TOKEN["1️⃣ Receive Invite Link<br/>Secure link with one-time token"]
-        S_REGISTER["2️⃣ Accept & Register<br/>Set staff credentials & profile"]
-        S_LOGIN["3️⃣ Staff Session<br/>Scoped automatically to assigned doctor"]
-        S_QUEUE["4️⃣ Daily Reception Queue<br/>View doctor's upcoming schedule & check-ins"]
-        S_ACTION{"5️⃣ Desk Action"}
-        S_STATUS["6️⃣ Check-In Patient<br/>Update status: 'confirmed' ➔ 'in-progress'"]
-        S_BILL["7️⃣ Payment Collection<br/>Toggle payment: 'Unpaid' ➔ 'Paid'"]
-        S_URGENT["8️⃣ Emergency Walk-In<br/>Instant booking with emergency flag"]
-    end
+    A["📩 1. Receive Invite Link<br/><sub>One-Time Token via Email / SMS</sub>"]
+    B["🔐 2. Register & Verify<br/><sub>Auto-Linked to Doctor's Clinic</sub>"]
+    C["🖥️ 3. Reception Desk Portal<br/><sub>Synchronized Live Queue Dashboard</sub>"]
+    D{"⚡ 4. Patient Arrival"}
+    D1["🩺 Scheduled Check-In<br/><sub>Mark Status: 'In-Progress'</sub>"]
+    D2["🚨 Emergency Walk-In<br/><sub>Urgent Flag + Instant Alert</sub>"]
+    E["💳 5. Payment Collection<br/><sub>Toggle Status: Unpaid ➔ Paid</sub>"]
+    F["✅ 6. Chamber Handoff<br/><sub>Send Patient to Doctor's Desk</sub>"]
 
-    subgraph API_SERVER ["⚡ Backend Verification & RBAC"]
-        V_INV["POST /api/auth/accept-invitation<br/>Verify token validity & expiry"]
-        V_LOGIN["POST /api/auth/login<br/>doctorOrStaff middleware verification"]
-        V_APPTS["GET /api/appointments<br/>Scoped by staff-doctor relation"]
-        V_UPDATE["PUT /api/appointments/:id/status<br/>Permission check via canManageAppointment"]
-        V_EMERG["POST /api/appointments<br/>Walk-in bypass with isEmergency=true"]
-    end
+    A -->|"🔑 Verification Token"| B
+    B -->|"🏥 Doctor-Staff Association"| C
+    C -->|"📋 Daily Booking Roster"| D
+    D -->|"Pre-booked Visit"| D1
+    D -->|"Direct Walk-In"| D2
+    D1 -->|"💵 Fee Collection"| E
+    D2 -->|"🚨 High-Priority Queue Bump"| E
+    E -->|"🔔 Real-Time Consultation Handshake"| F
+    F -.->|"🔄 Synchronized Queue"| C
 
-    subgraph DATABASE_STORE ["🗄️ MySQL Database Engine"]
-        DB_INV[("invitations<br/>token, status: 'accepted', expires_at")]
-        DB_USERS[("users<br/>role: 'staff', assigned hospital")]
-        DB_DOCSTAFF[("doctor_staff<br/>doctor_id, user_id (staff), status: 'active'")]
-        DB_APPTS[("appointments<br/>status, payment_status, is_emergency")]
-        DB_NOTIF[("notifications<br/>Alerts to doctor dashboard")]
-    end
-
-    subgraph REALTIME_SOCKET ["📡 Socket.IO Real-Time Synchronization"]
-        WS_SYNC["WebSocket Server<br/>Syncs receptionist desk with doctor room"]
-    end
-
-    %% Onboarding Flow
-    S_TOKEN -->|"Submit Invitation Token + Password"| V_INV
-    V_INV <-->|"Validate token status='pending' AND expires_at > NOW()"| DB_INV
-    V_INV -->|"INSERT INTO users (role='staff')"| DB_USERS
-    V_INV -->|"INSERT INTO doctor_staff (doctor_id, user_id)"| DB_DOCSTAFF
-    V_INV -->|"UPDATE invitations SET status='accepted'"| DB_INV
-    V_INV --> S_REGISTER
-
-    %% Login & Doctor Linkage
-    S_REGISTER --> S_LOGIN
-    S_LOGIN -->|"Send Staff Credentials"| V_LOGIN
-    V_LOGIN <-->|"SELECT users JOIN doctor_staff ON doctor_staff.user_id = users.id"| DB_DOCSTAFF
-    V_LOGIN -->|"Issue JWT with role='staff' + doctorId association"| S_LOGIN
-
-    %% Queue Monitoring
-    S_LOGIN --> S_QUEUE
-    S_QUEUE <-->|"GET /api/appointments for assigned doctor"| V_APPTS
-    V_APPTS <-->|"SELECT * FROM appointments WHERE doctor_id = :assignedDoctor"| DB_APPTS
-    WS_SYNC -.->|"Push live updates on new bookings / cancellations"| S_QUEUE
-
-    %% Desk Actions
-    S_QUEUE --> S_ACTION
-    S_ACTION --> S_STATUS
-    S_ACTION --> S_BILL
-    S_ACTION --> S_URGENT
-
-    %% Status Update
-    S_STATUS -->|"status: 'in-progress'"| V_UPDATE
-    S_BILL -->|"payment_status: 'Paid'"| V_UPDATE
-    V_UPDATE -->|"UPDATE appointments SET status=?, payment_status=?"| DB_APPTS
-    V_UPDATE ==>|"Emit queue change to Doctor screen"| WS_SYNC
-
-    %% Emergency Walk-In
-    S_URGENT -->|"Payload: { patientPhone, date: today, timeSlot, isEmergency: true }"| V_EMERG
-    V_EMERG -->|"INSERT INTO appointments (is_emergency=1, status='confirmed')"| DB_APPTS
-    V_EMERG -->|"INSERT INTO notifications (EMERGENCY ALERT)"| DB_NOTIF
-    V_EMERG ==>|"High-priority audio/visual alert to Doctor"| WS_SYNC
-
-    %% Styling
-    style STAFF_PORTAL fill:#0c1821,color:#e0e1dd,stroke:#3282b8,stroke-width:2px
-    style API_SERVER fill:#1b263b,color:#e0e1dd,stroke:#778da9,stroke-width:2px
-    style DATABASE_STORE fill:#0f2a1d,color:#e0e1dd,stroke:#2a9d8f,stroke-width:2px
-    style REALTIME_SOCKET fill:#2b1055,color:#e0e1dd,stroke:#00b4d8,stroke-width:2px
+    style A fill:#7C4DFF,color:#fff,stroke:#5E35B1,stroke-width:2px
+    style B fill:#536DFE,color:#fff,stroke:#3949AB,stroke-width:2px
+    style C fill:#00B0FF,color:#fff,stroke:#0091EA,stroke-width:2px
+    style D fill:#00E5FF,color:#000,stroke:#00B8D4,stroke-width:2px
+    style D1 fill:#00E676,color:#000,stroke:#00C853,stroke-width:2px
+    style D2 fill:#FF5252,color:#fff,stroke:#D50000,stroke-width:2px
+    style E fill:#FFD740,color:#000,stroke:#FFC400,stroke-width:2px
+    style F fill:#00C853,color:#fff,stroke:#1B5E20,stroke-width:2px
 ```
 
 <br />
@@ -603,82 +459,51 @@ graph TB
 
 <br />
 
-## 🗄️ Database Design & 2D Dynamic Data Flow
+## 🗄️ Database Design & 2D Data Flow
 
 <br />
 
-### 🔄 1. 2D Dynamic Database Architecture & Data Flow Diagram
+### 🔄 1. 2D Dynamic Database Architecture & Data Flow
 
 ```mermaid
 flowchart TD
-    subgraph ACTORS ["👥 System Actors & Clients"]
-        ACT_PATIENT["🧑‍💻 Patient Client"]
-        ACT_DOCTOR["👨‍⚕️ Doctor Portal"]
-        ACT_STAFF["👩‍💼 Staff / Receptionist Desk"]
-    end
+    U["👤 USERS<br/><sub>Patients, Doctors & Staff</sub>"]
+    INV["📩 INVITATIONS<br/><sub>One-Time Staff Tokens</sub>"]
+    DS["🔗 DOCTOR_STAFF<br/><sub>Clinic ➔ Staff Mapping</sub>"]
+    A["📅 APPOINTMENTS<br/><sub>Slots & Anti-Double-Booking</sub>"]
+    N["🔔 NOTIFICATIONS<br/><sub>WebSocket Real-Time Bus</sub>"]
+    C["📋 CONSULTATIONS<br/><sub>Clinical Diagnoses & Notes</sub>"]
+    RX["💊 PRESCRIPTIONS<br/><sub>Medicines & Dosages</sub>"]
+    R["🤝 REFERRALS<br/><sub>Inter-Doctor Cases</sub>"]
+    CNT["👥 CONTACTS<br/><sub>Trusted Doctor Network</sub>"]
 
-    subgraph IDENTITY_ACCESS ["🔐 Identity, Linking & Network Entities"]
-        TBL_USERS[("users<br/>PK: id | UK: email, phone<br/>role: 'patient'|'doctor'|'staff'<br/>rating, specialty, hospital, address")]
-        TBL_INV[("invitations<br/>PK: id | UK: token<br/>FK: invited_by ➔ users.id<br/>status: 'pending'|'accepted'")]
-        TBL_DOCSTAFF[("doctor_staff<br/>PK: id<br/>FK: doctor_id ➔ users.id<br/>FK: user_id ➔ users.id<br/>UK: (doctor_id, user_id)")]
-        TBL_CONTACTS[("contacts<br/>PK: id<br/>FK: user_id ➔ users.id<br/>FK: contact_user_id ➔ users.id<br/>UK: (user_id, contact_user_id)")]
-    end
+    U -->|"🔑 Doctor generates invite"| INV
+    INV -->|"✅ Staff accepts token"| DS
+    DS -->|"🏥 Links staff to doctor"| U
 
-    subgraph BOOKING_SCHEDULING ["📅 Scheduling & Appointment Engine"]
-        TBL_APPTS[("appointments<br/>PK: id<br/>FK: patient_id ➔ users.id<br/>FK: doctor_id ➔ users.id<br/>UK: (doctor_id, date, time_slot)<br/>status: pending|confirmed|in-progress|completed|cancelled<br/>payment_status: Paid|Unpaid<br/>rating: 0-5")]
-    end
+    U -->|"📅 Patient books slot"| A
+    A -->|"⚡ Triggers real-time alert"| N
+    N -.->|"📲 Socket.IO push"| U
 
-    subgraph CLINICAL_RECORDS ["📋 Clinical & Prescription Pipeline"]
-        TBL_CONS[("consultations<br/>PK: id<br/>FK: patient_id ➔ users.id<br/>FK: doctor_id ➔ users.id<br/>FK: appointment_id ➔ appointments.id<br/>category, diagnosis, notes, consultation_hour")]
-        TBL_RX[("prescriptions<br/>PK: id<br/>FK: consultation_id ➔ consultations.id<br/>medicine, dosage, duration")]
-    end
+    A -->|"🩺 Completed visit"| C
+    C -->|"💊 Prescribed medicines"| RX
 
-    subgraph NETWORK_REFERRAL ["🤝 Inter-Doctor Referrals"]
-        TBL_REF[("referrals<br/>PK: id<br/>FK: from_doctor_id ➔ users.id<br/>FK: to_doctor_id ➔ users.id<br/>FK: patient_id ➔ users.id<br/>priority: low|medium|high|critical<br/>status: pending|accepted|declined|completed")]
-    end
+    A -->|"⭐ Patient rates visit (1-5★)"| U
 
-    subgraph REALTIME_ALERTS ["🔔 Notification & Event Stream"]
-        TBL_NOTIF[("notifications<br/>PK: id<br/>FK: user_id ➔ users.id<br/>type, title, message, is_read")]
-    end
+    C -->|"🚨 Specialist needed"| R
+    R -->|"📨 Alert target doctor"| N
 
-    %% Actor write operations
-    ACT_PATIENT -->|"1️⃣ Register / OAuth<br/>[INSERT INTO users role='patient']"| TBL_USERS
-    ACT_DOCTOR -->|"1️⃣ Clinic Setup<br/>[UPDATE users SET hospital, specialty]"| TBL_USERS
-    ACT_DOCTOR -->|"Generate Staff Token<br/>[INSERT INTO invitations]"| TBL_INV
-    ACT_STAFF -->|"Accept Token & Link Staff<br/>[INSERT INTO doctor_staff]"| TBL_DOCSTAFF
-    TBL_INV -.->|"Validates Token & Expiry"| TBL_DOCSTAFF
+    U -.->|"🤝 Peer collaboration"| CNT
 
-    %% Appointment Flow
-    ACT_PATIENT -->|"2️⃣ Book 30-min Slot<br/>[INSERT INTO appointments status='pending']"| TBL_APPTS
-    ACT_STAFF -->|"Check-in / Walk-in<br/>[UPDATE status / INSERT is_emergency]"| TBL_APPTS
-    TBL_APPTS ==>|"Trigger Booking Alert<br/>[INSERT INTO notifications]"| TBL_NOTIF
-    TBL_NOTIF -.->|"Push WebSocket Alert"| ACT_DOCTOR
-    TBL_NOTIF -.->|"Push WebSocket Alert"| ACT_STAFF
-
-    %% Clinical Flow
-    ACT_DOCTOR -->|"3️⃣ Record Treatment<br/>[INSERT INTO consultations]"| TBL_CONS
-    TBL_APPTS -->|"Link via appointment_id<br/>[UPDATE status='completed']"| TBL_CONS
-    TBL_CONS ==>|"Cascade Rx Items<br/>[Batch INSERT INTO prescriptions]"| TBL_RX
-
-    %% Rating Recalculation Flow
-    ACT_PATIENT -->|"4️⃣ Submit 1-5 Star Review<br/>[UPDATE appointments.rating = 5]"| TBL_APPTS
-    TBL_APPTS ==>|"Recalculate Weighted Average<br/>[UPDATE users SET rating, ratings_count]"| TBL_USERS
-
-    %% Referral Network Flow
-    ACT_DOCTOR -->|"5️⃣ Specialist Referral<br/>[INSERT INTO referrals priority='critical']"| TBL_REF
-    TBL_REF ==>|"Notify Target Specialist<br/>[INSERT INTO notifications]"| TBL_NOTIF
-    TBL_REF -.->|"Access Shared Medical Records<br/>[SELECT FROM consultations]"| TBL_CONS
-
-    %% Contacts Network
-    ACT_DOCTOR -.->|"Save Trusted Peer Doctor<br/>[INSERT INTO contacts]"| TBL_CONTACTS
-
-    %% Custom Styles
-    style ACTORS fill:#1a1a2e,color:#e0e0e0,stroke:#7C4DFF,stroke-width:2px
-    style IDENTITY_ACCESS fill:#0d1b2a,color:#e0e1dd,stroke:#415a77,stroke-width:2px
-    style BOOKING_SCHEDULING fill:#0f2a1d,color:#e0e1dd,stroke:#2a9d8f,stroke-width:2px
-    style CLINICAL_RECORDS fill:#1a001a,color:#f3e8ff,stroke:#a855f7,stroke-width:2px
-    style NETWORK_REFERRAL fill:#2b1055,color:#e0e1dd,stroke:#ec4899,stroke-width:2px
-    style REALTIME_ALERTS fill:#0c1821,color:#e0e1dd,stroke:#00b4d8,stroke-width:2px
+    style U fill:#7C4DFF,color:#fff,stroke:#5E35B1,stroke-width:2px
+    style INV fill:#536DFE,color:#fff,stroke:#3949AB,stroke-width:2px
+    style DS fill:#00B0FF,color:#fff,stroke:#0091EA,stroke-width:2px
+    style A fill:#00E676,color:#000,stroke:#00C853,stroke-width:2px
+    style N fill:#FFD740,color:#000,stroke:#FFC400,stroke-width:2px
+    style C fill:#FF9100,color:#fff,stroke:#FF6D00,stroke-width:2px
+    style RX fill:#FF5252,color:#fff,stroke:#D50000,stroke-width:2px
+    style R fill:#E040FB,color:#fff,stroke:#AA00FF,stroke-width:2px
+    style CNT fill:#00E5FF,color:#000,stroke:#00B8D4,stroke-width:2px
 ```
 
 <br />
