@@ -27,7 +27,9 @@ import {
   Sparkles,
   HeartPulse,
   QrCode,
-  Edit3
+  Edit3,
+  Circle,
+  X
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
@@ -63,6 +65,31 @@ const PRESET_AVATARS = [
     url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%23ec4899"/><circle cx="50" cy="40" r="22" fill="%23ffd5c4"/><path d="M28,26 C28,16 38,12 50,12 C62,12 72,16 72,26 C72,36 68,38 68,40 C50,38 50,38 32,40 C32,38 28,36 28,26 Z" fill="%237c2d12"/><path d="M20,90 C20,72 32,64 50,64 C68,64 80,72 80,90 Z" fill="%23f43f5e"/></svg>'
   }
 ];
+
+// Minimum password length enforced by the backend (PUT /api/auth/change-password)
+const PASSWORD_MIN_LENGTH = 6;
+
+// Rule set shown live under the "new password" field
+const getPasswordChecks = (pwd) => {
+  const value = pwd || '';
+  return [
+    { id: 'length', label: `At least ${PASSWORD_MIN_LENGTH} characters`, met: value.length >= PASSWORD_MIN_LENGTH },
+    { id: 'case', label: 'Upper & lower case letter', met: /[a-z]/.test(value) && /[A-Z]/.test(value) },
+    { id: 'number', label: 'At least one number', met: /\d/.test(value) },
+    { id: 'symbol', label: 'At least one symbol', met: /[^A-Za-z0-9]/.test(value) }
+  ];
+};
+
+// Maps met-rule count (0-4) to a strength score, label and colour
+const getPasswordStrength = (checks) => {
+  const metCount = checks.filter((check) => check.met).length;
+  if (metCount <= 1) {
+    return { score: metCount, label: metCount === 0 ? 'Too weak' : 'Weak', color: '#ef4444' };
+  }
+  if (metCount === 2) return { score: 2, label: 'Fair', color: '#f59e0b' };
+  if (metCount === 3) return { score: 3, label: 'Strong', color: '#22d3ee' };
+  return { score: 4, label: 'Excellent', color: '#10b981' };
+};
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
@@ -284,6 +311,15 @@ export default function Profile() {
       ? [{ id: 'role', label: 'Doctor Profile', icon: Stethoscope, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }]
       : [])
   ];
+
+  // Derived password-security state for the Security & sign-in tab
+  const newPasswordChecks = getPasswordChecks(passwordForm.newPassword);
+  const passwordStrength = getPasswordStrength(newPasswordChecks);
+  const passwordsMatch = Boolean(passwordForm.newPassword) && passwordForm.newPassword === passwordForm.confirmPassword;
+  const isPasswordFormValid =
+    Boolean(passwordForm.currentPassword) &&
+    passwordForm.newPassword.length >= PASSWORD_MIN_LENGTH &&
+    passwordsMatch;
 
   return (
     <div className="page animate-in" style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -823,173 +859,262 @@ export default function Profile() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               
               {/* Change Password Card */}
-              <div className="card" style={{ border: '1px solid rgba(99, 102, 241, 0.3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem' }}>
-                  <Key size={20} color="var(--accent-primary)" />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>
-                    Change Password
-                  </h3>
+              <div className="card sec-card">
+                {/* Card header */}
+                <div className="sec-card-header">
+                  <div className="sec-icon-lg">
+                    <Key size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>
+                      Change Password
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+                      A strong password keeps your medical records, appointments and sign-in details secure.
+                    </p>
+                  </div>
                 </div>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                  A strong password helps keep your medical files, and login details secure.
-                </p>
+
+                <div className="sec-note">
+                  <ShieldCheck size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <span>
+                    For your security you'll confirm your current password first, then choose a new one.
+                    You stay signed in on this device after updating.
+                  </span>
+                </div>
 
                 {passwordSuccess && (
-                  <div style={{
-                    background: 'rgba(16,185,129,0.1)', color: '#10b981',
-                    padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                    fontSize: '0.9rem', marginBottom: '1.25rem',
-                    border: '1px solid rgba(16,185,129,0.2)',
-                    display: 'flex', alignItems: 'center', gap: '0.5rem'
-                  }}>
+                  <div className="sec-alert sec-alert-success">
                     <CheckCircle size={18} /> {passwordSuccess}
                   </div>
                 )}
 
                 {passwordError && (
-                  <div style={{
-                    background: 'rgba(239,68,68,0.1)', color: '#ef4444',
-                    padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                    fontSize: '0.9rem', marginBottom: '1.25rem',
-                    border: '1px solid rgba(239,68,68,0.2)',
-                    display: 'flex', alignItems: 'center', gap: '0.5rem'
-                  }}>
+                  <div className="sec-alert sec-alert-danger">
                     <AlertCircle size={18} /> {passwordError}
                   </div>
                 )}
 
-                <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
                   
-                  {/* Current Password (Required to verify identity) */}
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                      <Lock size={14} /> Current Password <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showCurrentPassword ? 'text' : 'password'}
-                        name="currentPassword"
-                        className="form-input"
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => {
-                          setPasswordForm({ ...passwordForm, currentPassword: e.target.value });
-                          if (passwordError) setPasswordError('');
-                        }}
-                        placeholder="Enter your current password"
-                        required
-                        style={{ paddingRight: '2.5rem' }}
-                      />
+                  {/* STEP 1: Verify current password */}
+                  <div className="sec-step">
+                    <div className="sec-step-head">
+                      <span className="sec-step-badge">1</span>
+                      <div>
+                        <div className="sec-step-title">Verify it's you</div>
+                        <div className="sec-step-sub">Enter the password you currently use to sign in</div>
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label htmlFor="currentPassword">Current password</label>
+                      <div className="input-icon-wrapper">
+                        <Lock />
+                        <input
+                          id="currentPassword"
+                          type={showCurrentPassword ? 'text' : 'password'}
+                          name="currentPassword"
+                          className="form-input password-input"
+                          value={passwordForm.currentPassword}
+                          onChange={(e) => {
+                            setPasswordForm({ ...passwordForm, currentPassword: e.target.value });
+                            if (passwordError) setPasswordError('');
+                          }}
+                          placeholder="Enter your current password"
+                          autoComplete="current-password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                        >
+                          {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* STEP 2: Choose the new password */}
+                  <div className="sec-step">
+                    <div className="sec-step-head">
+                      <span className="sec-step-badge">2</span>
+                      <div>
+                        <div className="sec-step-title">Choose a new password</div>
+                        <div className="sec-step-sub">Don't reuse a password from another account</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-2">
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label htmlFor="newPassword">New password</label>
+                        <div className="input-icon-wrapper">
+                          <Lock />
+                          <input
+                            id="newPassword"
+                            type={showNewPassword ? 'text' : 'password'}
+                            name="newPassword"
+                            className="form-input password-input"
+                            value={passwordForm.newPassword}
+                            onChange={(e) => {
+                              setPasswordForm({ ...passwordForm, newPassword: e.target.value });
+                              if (passwordError) setPasswordError('');
+                            }}
+                            placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`}
+                            minLength={PASSWORD_MIN_LENGTH}
+                            autoComplete="new-password"
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="password-toggle-btn"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                          >
+                            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+
+                        {passwordForm.newPassword && (
+                          <div className="sec-strength">
+                            <div className="sec-strength-track">
+                              <span
+                                style={{
+                                  width: `${(passwordStrength.score / 4) * 100}%`,
+                                  background: passwordStrength.color
+                                }}
+                              />
+                            </div>
+                            <span className="sec-strength-label" style={{ color: passwordStrength.color }}>
+                              {passwordStrength.label}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label htmlFor="confirmPassword">Confirm new password</label>
+                        <div className="input-icon-wrapper">
+                          <Lock />
+                          <input
+                            id="confirmPassword"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            name="confirmPassword"
+                            className="form-input password-input"
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) => {
+                              setPasswordForm({ ...passwordForm, confirmPassword: e.target.value });
+                              if (passwordError) setPasswordError('');
+                            }}
+                            placeholder="Re-type your new password"
+                            minLength={PASSWORD_MIN_LENGTH}
+                            autoComplete="new-password"
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="password-toggle-btn"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                          >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+
+                        {passwordForm.confirmPassword && (
+                          <div
+                            className="sec-match"
+                            style={{ color: passwordsMatch ? '#10b981' : '#ef4444' }}
+                          >
+                            {passwordsMatch ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+                            {passwordsMatch ? 'Passwords match' : 'Passwords do not match'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Live password requirements */}
+                    <div className="sec-checklist">
+                      {newPasswordChecks.map((check) => (
+                        <div
+                          key={check.id}
+                          className={`sec-check ${check.met ? 'sec-check-met' : ''}`}
+                        >
+                          {check.met ? <CheckCircle size={14} /> : <Circle size={14} />}
+                          {check.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action bar */}
+                  <div className="sec-form-actions">
+                    <div className="sec-validity">
+                      {isPasswordFormValid ? (
+                        <>
+                          <CheckCircle size={15} color="#10b981" /> Ready to update
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle size={15} color="var(--text-muted)" /> Complete all fields to continue
+                        </>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
                       <button
                         type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        style={{
-                          position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                          background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex'
+                        className="btn btn-ghost"
+                        disabled={passwordSaving}
+                        onClick={() => {
+                          setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                          setPasswordError('');
+                          setPasswordSuccess('');
+                          setShowCurrentPassword(false);
+                          setShowNewPassword(false);
+                          setShowConfirmPassword(false);
                         }}
                       >
-                        {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        <X size={16} /> Clear
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={passwordSaving || !isPasswordFormValid}
+                        style={{ minWidth: '170px', justifyContent: 'center' }}
+                      >
+                        {passwordSaving ? (
+                          'Updating password...'
+                        ) : (
+                          <>
+                            <ShieldCheck size={16} /> Update Password
+                          </>
+                        )}
                       </button>
                     </div>
-                  </div>
-
-                  {/* New Password & Confirm */}
-                  <div className="grid grid-2">
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                        <Lock size={14} /> New Password <span style={{ color: '#ef4444' }}>*</span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>(Min 6 chars)</span>
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showNewPassword ? 'text' : 'password'}
-                          name="newPassword"
-                          className="form-input"
-                          value={passwordForm.newPassword}
-                          onChange={(e) => {
-                            setPasswordForm({ ...passwordForm, newPassword: e.target.value });
-                            if (passwordError) setPasswordError('');
-                          }}
-                          placeholder="Choose new password"
-                          minLength={6}
-                          required
-                          style={{ paddingRight: '2.5rem' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          style={{
-                            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                            background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex'
-                          }}
-                        >
-                          {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                        <Lock size={14} /> Confirm New Password <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          name="confirmPassword"
-                          className="form-input"
-                          value={passwordForm.confirmPassword}
-                          onChange={(e) => {
-                            setPasswordForm({ ...passwordForm, confirmPassword: e.target.value });
-                            if (passwordError) setPasswordError('');
-                          }}
-                          placeholder="Re-type new password"
-                          minLength={6}
-                          required
-                          style={{ paddingRight: '2.5rem' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          style={{
-                            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                            background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex'
-                          }}
-                        >
-                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {passwordForm.newPassword && passwordForm.confirmPassword && (
-                    <div style={{
-                      fontSize: '0.78rem',
-                      color: passwordForm.newPassword === passwordForm.confirmPassword ? '#10b981' : '#ef4444'
-                    }}>
-                      {passwordForm.newPassword === passwordForm.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
-                    </div>
-                  )}
-
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      disabled={passwordSaving}
-                      style={{ minWidth: '160px' }}
-                    >
-                      {passwordSaving ? 'Updating password...' : 'Update Password'}
-                    </button>
                   </div>
                 </form>
               </div>
 
               {/* Linked Sign-in Services */}
               <div className="card">
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-                  How you sign in to MedZoo
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-                  Your connected authentication methods and account identity.
-                </p>
+                <div className="card-header" style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div className="sec-icon-lg">
+                      <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                        How you sign in to MedZoo
+                      </h3>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0' }}>
+                        Your connected authentication methods and account identity.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   
