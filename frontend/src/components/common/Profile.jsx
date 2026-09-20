@@ -26,7 +26,8 @@ import {
   Calendar,
   Sparkles,
   HeartPulse,
-  QrCode
+  QrCode,
+  Edit3
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
@@ -108,6 +109,8 @@ export default function Profile() {
   // Doctor specialty selection state
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
   const [customSpecialty, setCustomSpecialty] = useState('');
+  const [isEditingDoctor, setIsEditingDoctor] = useState(false);
+  const [showDoctorQRModal, setShowDoctorQRModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -221,6 +224,7 @@ export default function Profile() {
       });
       updateUser(res.data);
       setSuccess('Profile details saved successfully!');
+      setIsEditingDoctor(false);
       setTimeout(() => setSuccess(''), 3500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile.');
@@ -277,10 +281,7 @@ export default function Profile() {
     { id: 'personal', label: 'Personal info', icon: User, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
     { id: 'security', label: 'Security & sign-in', icon: ShieldCheck, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
     ...(user?.role === 'doctor'
-      ? [
-          { id: 'role', label: 'Doctor Profile', icon: Stethoscope, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
-          { id: 'doctor-qr', label: 'Doctor QR', icon: QrCode, color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' }
-        ]
+      ? [{ id: 'role', label: 'Doctor Profile', icon: Stethoscope, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }]
       : [])
   ];
 
@@ -556,33 +557,6 @@ export default function Profile() {
                       <span style={{ color: 'var(--text-muted)' }}>Experience: </span>
                       <strong>{user?.experience || 0} years</strong>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Doctor QR Summary Card (Only if Doctor) */}
-              {user?.role === 'doctor' && (
-                <div className="card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('doctor-qr')}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                      <div style={{
-                        width: '42px', height: '42px', borderRadius: '50%',
-                        background: 'rgba(168, 85, 247, 0.15)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', color: '#a855f7',
-                        flexShrink: 0
-                      }}>
-                        <QrCode size={22} />
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
-                          Doctor QR &amp; Clinic Standee
-                        </h3>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                          Download printable clinic desk standee and scannable QR code for patient OPD bookings.
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} color="var(--text-muted)" />
                   </div>
                 </div>
               )}
@@ -1131,112 +1105,217 @@ export default function Profile() {
           {activeTab === 'role' && user?.role === 'doctor' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className="card">
-                <form onSubmit={handleSaveProfile}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-                    Doctor Professional Profile
-                  </h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                    Patients see these details when discovering specialists and booking clinic appointments.
-                  </p>
+                {/* Header with Title + Doctor QR Button + Edit Button */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '1.25rem',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem'
+                }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
+                      Doctor Professional Profile
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Patients see these details when discovering specialists and booking clinic appointments.
+                    </p>
+                  </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div className="grid grid-2">
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                          <Stethoscope size={14} /> Medical Specialty
-                        </label>
-                        <select
-                          name="specialty"
-                          className="form-select"
-                          value={selectedSpecialty}
-                          onChange={handleSpecialtySelect}
-                        >
-                          <option value="">Select Medical Specialty</option>
-                          {SPECIALTY_OPTIONS.map((spec) => (
-                            <option key={spec} value={spec}>{spec}</option>
-                          ))}
-                        </select>
-                      </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    {/* Doctor QR Modal Button */}
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setShowDoctorQRModal(true)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        fontSize: '0.85rem',
+                        padding: '0.5rem 0.9rem'
+                      }}
+                    >
+                      <QrCode size={16} /> Doctor QR
+                    </button>
 
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                          <Award size={14} /> Qualifications
-                        </label>
-                        <input
-                          type="text"
-                          name="qualifications"
-                          className="form-input"
-                          value={form.qualifications}
-                          onChange={handleChange}
-                          placeholder="e.g. MBBS, MD, MS"
-                        />
-                      </div>
-                    </div>
-
-                    {selectedSpecialty === 'Other' && (
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                          <Stethoscope size={14} /> Specify Medical Specialty <span style={{ color: '#ef4444' }}>*</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          value={customSpecialty}
-                          onChange={handleCustomSpecialtyChange}
-                          placeholder="type speciality"
-                          required
-                        />
-                      </div>
-                    )}
-
-                    <div className="grid grid-2">
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                          <Building size={14} /> Hospital / Clinic Affiliation
-                        </label>
-                        <input
-                          type="text"
-                          name="hospital"
-                          className="form-input"
-                          value={form.hospital}
-                          onChange={handleChange}
-                          placeholder="e.g. Apollo Hospital / City Care Clinic"
-                        />
-                      </div>
-
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                          <Star size={14} /> Clinical Experience (Years)
-                        </label>
-                        <input
-                          type="number"
-                          name="experience"
-                          min="0"
-                          className="form-input"
-                          value={form.experience}
-                          onChange={handleChange}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: '0.5rem' }}>
-                      <button type="submit" className="btn btn-primary" disabled={saving}>
-                        {saving ? 'Saving...' : 'Update Doctor Info'}
+                    {/* Edit Button next to Doctor Professional Profile */}
+                    {!isEditingDoctor && (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => setIsEditingDoctor(true)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          fontSize: '0.85rem',
+                          padding: '0.5rem 0.9rem'
+                        }}
+                      >
+                        <Edit3 size={15} /> Edit
                       </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Read-Only Details View (Default) */}
+                {!isEditingDoctor ? (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '1.25rem',
+                    padding: '1.25rem',
+                    background: 'var(--surface-hover)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border)'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Stethoscope size={13} /> Medical Specialty
+                      </div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {user?.specialty || 'General'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Award size={13} /> Qualifications
+                      </div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {user?.qualifications || 'Not specified'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Building size={13} /> Hospital / Clinic Affiliation
+                      </div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {user?.hospital || 'Private Practice'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Star size={13} /> Clinical Experience
+                      </div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {user?.experience ? `${user.experience} Years` : 'Not specified'}
+                      </div>
                     </div>
                   </div>
-                </form>
+                ) : (
+                  /* Editable Form (When doctor clicks Edit) */
+                  <form onSubmit={handleSaveProfile}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div className="grid grid-2">
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                            <Stethoscope size={14} /> Medical Specialty
+                          </label>
+                          <select
+                            name="specialty"
+                            className="form-select"
+                            value={selectedSpecialty}
+                            onChange={handleSpecialtySelect}
+                          >
+                            <option value="">Select Medical Specialty</option>
+                            {SPECIALTY_OPTIONS.map((spec) => (
+                              <option key={spec} value={spec}>{spec}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                            <Award size={14} /> Qualifications
+                          </label>
+                          <input
+                            type="text"
+                            name="qualifications"
+                            className="form-input"
+                            value={form.qualifications}
+                            onChange={handleChange}
+                            placeholder="e.g. MBBS, MD, MS"
+                          />
+                        </div>
+                      </div>
+
+                      {selectedSpecialty === 'Other' && (
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                            <Stethoscope size={14} /> Specify Medical Specialty <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={customSpecialty}
+                            onChange={handleCustomSpecialtyChange}
+                            placeholder="type speciality"
+                            required
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-2">
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                            <Building size={14} /> Hospital / Clinic Affiliation
+                          </label>
+                          <input
+                            type="text"
+                            name="hospital"
+                            className="form-input"
+                            value={form.hospital}
+                            onChange={handleChange}
+                            placeholder="e.g. Apollo Hospital / City Care Clinic"
+                          />
+                        </div>
+
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                            <Star size={14} /> Clinical Experience (Years)
+                          </label>
+                          <input
+                            type="number"
+                            name="experience"
+                            min="0"
+                            className="form-input"
+                            value={form.experience}
+                            onChange={handleChange}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Save Changes and Cancel buttons */}
+                      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <button type="submit" className="btn btn-primary" disabled={saving}>
+                          {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => setIsEditingDoctor(false)}
+                          disabled={saving}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           )}
 
-          {/* TAB: DOCTOR QR (Doctor Only) */}
-          {activeTab === 'doctor-qr' && user?.role === 'doctor' && (
-            <DoctorQR />
-          )}
-
         </main>
       </div>
+
+      {/* Doctor QR Code Modal Popup */}
+      <DoctorQR isOpen={showDoctorQRModal} onClose={() => setShowDoctorQRModal(false)} />
 
     </div>
   );
