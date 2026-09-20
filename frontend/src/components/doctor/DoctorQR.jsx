@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Download, Copy, Check, Share2, QrCode, ShieldCheck, 
-  Stethoscope, MapPin, Building, Sparkles, ExternalLink, Printer
+  Building, X, ExternalLink
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function DoctorQR() {
+export default function DoctorQR({ isOpen, onClose }) {
   const { user } = useAuth();
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [copied, setCopied] = useState(false);
@@ -18,7 +18,7 @@ export default function DoctorQR() {
   const profileUrl = `${baseUrl}/discover?doctor=${user?._id || user?.id}`;
 
   useEffect(() => {
-    if (!user) return;
+    if (!isOpen || !user) return;
     setGenerating(true);
 
     // High error-correction QR code (Level H)
@@ -37,7 +37,18 @@ export default function DoctorQR() {
       console.error('Doctor QR generation failed:', err);
       setGenerating(false);
     });
-  }, [user, profileUrl]);
+  }, [isOpen, user, profileUrl]);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   // 1. Download Clean QR Code (PNG)
   const handleDownloadQR = () => {
@@ -56,16 +67,16 @@ export default function DoctorQR() {
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 1200;
-      canvas.height = 1600;
+      canvas.height = 1520;
       const ctx = canvas.getContext('2d');
 
       // 1. Background gradient (Deep Medical Navy)
-      const bgGrad = ctx.createLinearGradient(0, 0, 1200, 1600);
+      const bgGrad = ctx.createLinearGradient(0, 0, 1200, 1520);
       bgGrad.addColorStop(0, '#0a0f1d');
       bgGrad.addColorStop(0.5, '#11192e');
       bgGrad.addColorStop(1, '#070b14');
       ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, 1200, 1600);
+      ctx.fillRect(0, 0, 1200, 1520);
 
       // Top Accent glow
       const glowGrad = ctx.createRadialGradient(600, 0, 50, 600, 0, 700);
@@ -78,7 +89,7 @@ export default function DoctorQR() {
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
       ctx.lineWidth = 3;
-      ctx.strokeRect(60, 60, 1080, 1480);
+      ctx.strokeRect(60, 60, 1080, 1400);
       ctx.restore();
 
       // 3. Header: MedZoo Brand
@@ -95,7 +106,7 @@ export default function DoctorQR() {
       const cardX = 140;
       const cardY = 240;
       const cardW = 920;
-      const cardH = 1140;
+      const cardH = 1060;
 
       ctx.fillStyle = '#ffffff';
       ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
@@ -143,7 +154,7 @@ export default function DoctorQR() {
         qrImg.src = qrDataUrl;
       });
 
-      const qrSize = 580;
+      const qrSize = 560;
       const qrX = (1200 - qrSize) / 2;
       const qrY = 510;
 
@@ -158,27 +169,23 @@ export default function DoctorQR() {
 
       ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-      // 7. Instructions below QR
+      // 7. Call to action below QR (clean, no extra scanner text)
       ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('SCAN TO BOOK APPOINTMENT', 600, 1180);
+      ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('SCAN TO BOOK APPOINTMENT', 600, 1185);
 
       ctx.fillStyle = '#64748b';
       ctx.font = '500 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('Instant OPD token • Digital prescription records • Verified profile', 600, 1225);
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '500 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('Camera or any UPI / QR Scanner App', 600, 1265);
+      ctx.fillText('Instant OPD token  •  Digital prescription records  •  Verified profile', 600, 1235);
 
       // 8. Footer on outer card
       ctx.fillStyle = '#e2e8f0';
       ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('medzoo.vercel.app', 600, 1470);
+      ctx.fillText('medzoo.vercel.app', 600, 1390);
 
       ctx.fillStyle = '#64748b';
       ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('Unified Blockchain & AI Healthcare Platform', 600, 1505);
+      ctx.fillText('Unified Blockchain & AI Healthcare Platform', 600, 1425);
 
       // Trigger download
       const standeeUrl = canvas.toDataURL('image/png');
@@ -221,72 +228,124 @@ export default function DoctorQR() {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      
-      {/* Header Overview Card */}
-      <div className="card" style={{
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.08))',
-        border: '1px solid rgba(99, 102, 241, 0.25)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-              <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                <QrCode size={13} /> Official Doctor QR
-              </span>
-              <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                <ShieldCheck size={13} /> Verified Practitioner
-              </span>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        background: 'rgba(0, 0, 0, 0.78)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        animation: 'fadeIn 0.2s ease-out'
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card"
+        style={{
+          width: '100%',
+          maxWidth: '460px',
+          maxHeight: '92vh',
+          overflowY: 'auto',
+          padding: '1.5rem',
+          position: 'relative',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+          animation: 'fadeIn 0.25s ease-out',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Top Header Bar: Title with Download and Close (X) Buttons */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '1.25rem',
+          paddingBottom: '0.75rem',
+          borderBottom: '1px solid var(--border)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '0.5rem',
+              background: 'linear-gradient(135deg, var(--accent-primary), #a855f7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff'
+            }}>
+              <QrCode size={18} />
             </div>
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 0.35rem 0', letterSpacing: '-0.02em' }}>
-              Doctor QR &amp; Clinic Standee
-            </h2>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: 0, maxWidth: '600px', lineHeight: 1.5 }}>
-              Your dedicated professional QR code. Patients can scan this from your clinic reception, prescription pad, or WhatsApp to directly book appointments and access digital OPD tokens.
-            </p>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Doctor QR</h3>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Official Clinic Booking QR</p>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {/* Side action buttons: Download and Cross (X) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button
               className="btn btn-primary"
               onClick={handleDownloadStandee}
               disabled={downloadingStandee || !qrDataUrl}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.82rem'
+              }}
+              title="Download High-Res Standee (PNG)"
             >
-              <Download size={16} />
-              {downloadingStandee ? 'Generating...' : 'Download Desk Standee'}
+              <Download size={14} />
+              {downloadingStandee ? 'Saving...' : 'Download'}
             </button>
 
             <button
-              className="btn btn-secondary"
-              onClick={handleCopyLink}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+              onClick={onClose}
+              style={{
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-secondary)',
+                width: '34px',
+                height: '34px',
+                borderRadius: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                e.currentTarget.style.color = '#ef4444';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--surface-hover)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+              title="Close"
             >
-              {copied ? <Check size={16} color="var(--success)" /> : <Copy size={16} />}
-              {copied ? 'Copied Link!' : 'Copy Link'}
+              <X size={18} />
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Main Two-Column Layout: Standee Preview + Configuration/Actions */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '1.5rem',
-        alignItems: 'start'
-      }}>
-
-        {/* Column 1: Professional Visual Standee Card Preview */}
+        {/* Professional Visual Standee Card Preview */}
         <div style={{
           background: 'linear-gradient(180deg, #0d1322 0%, #151d32 100%)',
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: '1.25rem',
           border: '1px solid rgba(255, 255, 255, 0.12)',
-          boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.6)',
-          padding: '2rem 1.5rem',
+          boxShadow: '0 15px 35px -10px rgba(0, 0, 0, 0.5)',
+          padding: '1.5rem 1.25rem',
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden'
@@ -294,7 +353,7 @@ export default function DoctorQR() {
           {/* Top glow accent */}
           <div style={{
             position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-            width: '280px', height: '120px',
+            width: '240px', height: '100px',
             background: 'radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, transparent 70%)',
             pointerEvents: 'none'
           }} />
@@ -302,10 +361,10 @@ export default function DoctorQR() {
           {/* MedZoo Branding Badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-            padding: '0.35rem 0.85rem', borderRadius: '2rem',
+            padding: '0.3rem 0.75rem', borderRadius: '2rem',
             background: 'rgba(99, 102, 241, 0.18)', border: '1px solid rgba(99, 102, 241, 0.4)',
-            color: '#a5b4fc', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em',
-            textTransform: 'uppercase', marginBottom: '1.25rem'
+            color: '#a5b4fc', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em',
+            textTransform: 'uppercase', marginBottom: '1rem'
           }}>
             ⚕ MedZoo Smart Healthcare
           </div>
@@ -313,14 +372,14 @@ export default function DoctorQR() {
           {/* Doctor Info Card */}
           <div style={{
             background: '#ffffff',
-            borderRadius: '1.25rem',
-            padding: '1.75rem 1.25rem',
-            boxShadow: '0 12px 30px rgba(0, 0, 0, 0.25)',
+            borderRadius: '1rem',
+            padding: '1.4rem 1rem',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
             color: '#0f172a'
           }}>
             <h3 style={{
-              margin: '0 0 0.25rem 0',
-              fontSize: '1.35rem',
+              margin: '0 0 0.2rem 0',
+              fontSize: '1.25rem',
               fontWeight: 800,
               color: '#0f172a',
               letterSpacing: '-0.02em'
@@ -329,10 +388,10 @@ export default function DoctorQR() {
             </h3>
 
             <div style={{
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               fontWeight: 700,
               color: '#4f46e5',
-              marginBottom: '0.4rem'
+              marginBottom: '0.35rem'
             }}>
               {user?.specialty || 'General Practitioner'}
               {user?.qualifications && ` • ${user.qualifications}`}
@@ -340,13 +399,13 @@ export default function DoctorQR() {
 
             {(user?.hospital || user?.locality) && (
               <div style={{
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 color: '#64748b',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.3rem',
-                marginBottom: '1rem'
+                marginBottom: '0.85rem'
               }}>
                 <Building size={13} />
                 {[user?.hospital, user?.locality || user?.address].filter(Boolean).join(', ')}
@@ -356,42 +415,42 @@ export default function DoctorQR() {
             {/* High-Resolution Scannable QR Code */}
             <div style={{
               background: '#f8fafc',
-              borderRadius: '1rem',
-              padding: '1rem',
-              margin: '0.75rem auto 1rem',
+              borderRadius: '0.75rem',
+              padding: '0.85rem',
+              margin: '0.5rem auto 0.85rem',
               display: 'inline-block',
               border: '1px solid #e2e8f0',
               boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.03)'
             }}>
               {generating ? (
                 <div style={{
-                  width: '210px', height: '210px',
+                  width: '190px', height: '190px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: '#94a3b8'
                 }}>
-                  <QrCode size={40} style={{ animation: 'pulse 1.5s infinite' }} />
+                  <QrCode size={36} style={{ animation: 'pulse 1.5s infinite' }} />
                 </div>
               ) : qrDataUrl ? (
                 <img
                   src={qrDataUrl}
                   alt={`Doctor QR Code for Dr. ${user?.name}`}
                   style={{
-                    width: '210px',
-                    height: '210px',
+                    width: '190px',
+                    height: '190px',
                     display: 'block',
-                    borderRadius: '0.5rem'
+                    borderRadius: '0.35rem'
                   }}
                 />
               ) : (
-                <div style={{ width: '210px', height: '210px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '190px', height: '190px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   QR Error
                 </div>
               )}
             </div>
 
-            {/* Scan Call to Action */}
+            {/* Scan Call to Action (clean, no scanner app text) */}
             <div style={{
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               fontWeight: 800,
               color: '#0f172a',
               letterSpacing: '0.04em',
@@ -399,119 +458,46 @@ export default function DoctorQR() {
             }}>
               Scan to Book Appointment
             </div>
-            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
-              Point camera or any QR / UPI scanner app
-            </div>
           </div>
 
           {/* Footer inside standee */}
-          <div style={{ marginTop: '1.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>
+          <div style={{ marginTop: '1rem', fontSize: '0.72rem', color: '#94a3b8' }}>
             Instant OPD Tokens • Digital History • MedZoo Verified
           </div>
         </div>
 
-        {/* Column 2: Management & Distribution Actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          
-          {/* Action Card */}
-          <div className="card">
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 1rem 0' }}>
-              Downloads &amp; Distribution
-            </h3>
+        {/* Secondary Quick Action Buttons */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={handleCopyLink}
+            style={{ flex: 1, justifyContent: 'center', gap: '0.35rem', fontSize: '0.82rem' }}
+          >
+            {copied ? <Check size={14} color="var(--success)" /> : <Copy size={14} />}
+            {copied ? 'Copied Link!' : 'Copy Booking Link'}
+          </button>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button
-                className="btn btn-primary"
-                onClick={handleDownloadStandee}
-                disabled={downloadingStandee || !qrDataUrl}
-                style={{ justifyContent: 'center', gap: '0.5rem', padding: '0.75rem 1rem' }}
-              >
-                <Download size={18} />
-                {downloadingStandee ? 'Generating High-Res Standee...' : 'Download Printable Clinic Standee (PNG)'}
-              </button>
+          <button
+            className="btn btn-secondary"
+            onClick={handleDownloadQR}
+            disabled={!qrDataUrl}
+            style={{ flex: 1, justifyContent: 'center', gap: '0.35rem', fontSize: '0.82rem' }}
+            title="Download QR code image only"
+          >
+            <QrCode size={14} /> QR Only (PNG)
+          </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={handleDownloadQR}
-                disabled={!qrDataUrl}
-                style={{ justifyContent: 'center', gap: '0.5rem' }}
-              >
-                <QrCode size={16} /> Download QR Code Only (PNG)
-              </button>
-
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  className="btn btn-ghost"
-                  onClick={handleCopyLink}
-                  style={{ flex: 1, justifyContent: 'center', gap: '0.4rem' }}
-                >
-                  {copied ? <Check size={16} color="var(--success)" /> : <Copy size={16} />}
-                  {copied ? 'Copied' : 'Copy Booking Link'}
-                </button>
-
-                <button
-                  className="btn btn-ghost"
-                  onClick={handleShare}
-                  style={{ flex: 1, justifyContent: 'center', gap: '0.4rem' }}
-                >
-                  <Share2 size={16} /> Share Link
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Direct Link Preview Card */}
-          <div className="card">
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>
-              Public Booking URL
-            </h4>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem 0' }}>
-              This link is embedded in your QR code and opens directly to your appointment booking page on MedZoo.
-            </p>
-            <div style={{
-              padding: '0.65rem 0.85rem',
-              background: 'var(--surface-hover)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border)',
-              fontSize: '0.75rem',
-              fontFamily: 'monospace',
-              color: 'var(--accent-primary)',
-              wordBreak: 'break-all',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.5rem'
-            }}>
-              <span>{profileUrl}</span>
-              <a
-                href={profileUrl}
-                target="_blank"
-                rel="noreferrer"
-                style={{ color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center' }}
-                title="Open preview in new tab"
-              >
-                <ExternalLink size={14} />
-              </a>
-            </div>
-          </div>
-
-          {/* Recommendations / Best Practices */}
-          <div className="card" style={{ background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
-            <h4 style={{ fontSize: '0.88rem', fontWeight: 700, margin: '0 0 0.6rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Sparkles size={16} color="var(--accent-warning)" /> Where to use your Doctor QR?
-            </h4>
-            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              <li><strong>Reception Desk:</strong> Print the standee and place it on an acrylic stand for walk-in OPD token registration.</li>
-              <li><strong>Prescription Slips:</strong> Include the clean QR code in the header or footer of your printed prescriptions.</li>
-              <li><strong>WhatsApp &amp; Social:</strong> Share the standee as a status or image so patients can book appointments from home.</li>
-              <li><strong>Visiting Card:</strong> Add the QR code on the back of your doctor business card.</li>
-            </ul>
-          </div>
-
+          <button
+            className="btn btn-ghost"
+            onClick={handleShare}
+            style={{ padding: '0.5rem 0.75rem' }}
+            title="Share"
+          >
+            <Share2 size={15} />
+          </button>
         </div>
 
       </div>
-
     </div>
   );
 }
