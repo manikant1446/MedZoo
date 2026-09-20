@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, TrendingUp, Activity, FileCheck, RefreshCw, Clock, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Users, TrendingUp, Activity, FileCheck, RefreshCw, Clock, ArrowUpRight, ArrowDownRight, QrCode } from 'lucide-react';
 import { Line, Doughnut, Bar, Pie } from 'react-chartjs-2';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import ClinicQRCode from './ClinicQRCode';
 
 const COLORS = {
   purple: '#818cf8', cyan: '#22d3ee', green: '#10b981',
@@ -19,6 +20,7 @@ export default function DoctorDashboard() {
   const [timeRange, setTimeRange] = useState('daily');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   const fetchAnalytics = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -313,10 +315,15 @@ export default function DoctorDashboard() {
           <h1>Doctor Analytics</h1>
           <p>Real-time performance overview for Dr. {user?.name}</p>
         </div>
-        <button className="btn btn-secondary" onClick={() => fetchAnalytics(true)} disabled={refreshing}>
-          <RefreshCw size={16} style={refreshing ? { animation: 'spin 1s linear infinite' } : {}} />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-secondary" onClick={() => setShowQR(true)} style={{ gap: '0.4rem' }}>
+            <QrCode size={16} /> My QR Code
+          </button>
+          <button className="btn btn-secondary" onClick={() => fetchAnalytics(true)} disabled={refreshing}>
+            <RefreshCw size={16} style={refreshing ? { animation: 'spin 1s linear infinite' } : {}} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {/* Stats Row */}
@@ -448,6 +455,9 @@ export default function DoctorDashboard() {
           </div>
         </div>
       </div>
+
+      {/* QR Code Modal */}
+      <ClinicQRCode isOpen={showQR} onClose={() => setShowQR(false)} />
     </div>
   );
 }

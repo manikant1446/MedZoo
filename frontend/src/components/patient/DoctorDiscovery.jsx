@@ -60,6 +60,23 @@ export default function DoctorDiscovery() {
         if (specialty) params.specialty = specialty;
         const res = await axios.get(`${API_BASE_URL}/doctors`, { params });
         setDoctors(res.data);
+
+        // Auto-open booking if doctor param is in URL (e.g. from QR code scan)
+        const doctorParam = searchParams.get('doctor');
+        if (doctorParam) {
+          const matched = res.data.find(d => String(d._id) === String(doctorParam));
+          if (matched) {
+            openBooking(matched);
+          } else {
+            // If not found in current search/filtered list, fetch doctor profile directly
+            try {
+              const docRes = await axios.get(`${API_BASE_URL}/doctors/public/${doctorParam}`);
+              if (docRes.data) openBooking(docRes.data);
+            } catch (fetchErr) {
+              console.warn('Could not auto-load doctor from QR param:', fetchErr);
+            }
+          }
+        }
       } catch (err) { 
         console.error(err); 
       } finally { 
@@ -67,7 +84,7 @@ export default function DoctorDiscovery() {
       }
     };
     fetchDoctors();
-  }, [search, specialty]);
+  }, [search, specialty, searchParams]);
 
   // Fetch slots when date changes
   useEffect(() => {
