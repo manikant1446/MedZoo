@@ -25,10 +25,12 @@ import {
   Camera,
   Calendar,
   Sparkles,
-  HeartPulse
+  HeartPulse,
+  QrCode
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import DoctorQR from '../doctor/DoctorQR';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -275,7 +277,10 @@ export default function Profile() {
     { id: 'personal', label: 'Personal info', icon: User, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
     { id: 'security', label: 'Security & sign-in', icon: ShieldCheck, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
     ...(user?.role === 'doctor'
-      ? [{ id: 'role', label: 'Doctor Profile', icon: Stethoscope, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }]
+      ? [
+          { id: 'role', label: 'Doctor Profile', icon: Stethoscope, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+          { id: 'doctor-qr', label: 'Doctor QR', icon: QrCode, color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' }
+        ]
       : [])
   ];
 
@@ -551,6 +556,33 @@ export default function Profile() {
                       <span style={{ color: 'var(--text-muted)' }}>Experience: </span>
                       <strong>{user?.experience || 0} years</strong>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Doctor QR Summary Card (Only if Doctor) */}
+              {user?.role === 'doctor' && (
+                <div className="card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('doctor-qr')}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{
+                        width: '42px', height: '42px', borderRadius: '50%',
+                        background: 'rgba(168, 85, 247, 0.15)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', color: '#a855f7',
+                        flexShrink: 0
+                      }}>
+                        <QrCode size={22} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
+                          Doctor QR &amp; Clinic Standee
+                        </h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                          Download printable clinic desk standee and scannable QR code for patient OPD bookings.
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} color="var(--text-muted)" />
                   </div>
                 </div>
               )}
@@ -1196,6 +1228,11 @@ export default function Profile() {
                 </form>
               </div>
             </div>
+          )}
+
+          {/* TAB: DOCTOR QR (Doctor Only) */}
+          {activeTab === 'doctor-qr' && user?.role === 'doctor' && (
+            <DoctorQR />
           )}
 
         </main>
