@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  FileText, ShieldCheck, Activity, Star, X, Stethoscope, 
+  FileText, ShieldCheck, Activity, Star, X, 
   Search, RefreshCw, Calendar, CheckCircle2, Clock, ArrowRight, Sparkles 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -69,7 +69,6 @@ export default function PatientDashboard() {
 
   const treated = consultations.filter(c => c.status === 'treated').length;
   const pending = consultations.filter(c => c.status === 'pending').length;
-  const doctorsVisited = [...new Set(consultations.map(c => c.doctorId?._id).filter(Boolean))].length;
 
   const todayStr = new Date().toLocaleDateString('en-US', { 
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
@@ -150,20 +149,6 @@ export default function PatientDashboard() {
         </Link>
       </div>
 
-      {/* Quick Actions Row */}
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        <Link to="/discover" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <Search size={16} /> Find a Doctor
-        </Link>
-        <Link to="/appointments" className="btn btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <Calendar size={16} /> My Appointments
-        </Link>
-        {doctorsVisited > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.85rem', borderRadius: '0.5rem', background: 'var(--surface-hover)', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600 }}>
-            <Stethoscope size={15} /> {doctorsVisited} {doctorsVisited === 1 ? 'Doctor' : 'Doctors'} Visited
-          </span>
-        )}
-      </div>
 
       {/* Consultations Card */}
       <div className="card">
