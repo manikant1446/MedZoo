@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  FileText, ShieldCheck, Activity, Star, X, Phone, 
+  FileText, ShieldCheck, Activity, Star, X, Stethoscope, 
   Search, RefreshCw, Calendar, CheckCircle2, Clock, ArrowRight, Sparkles 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +11,7 @@ import { API_BASE_URL } from '../../config';
 export default function PatientDashboard() {
   const { user } = useAuth();
   const [consultations, setConsultations] = useState([]);
+  const [upcomingCount, setUpcomingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -23,8 +24,19 @@ export default function PatientDashboard() {
   const fetchData = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/consultations/patient`);
-      setConsultations(res.data);
+      const [consRes, apptRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/consultations/patient`),
+        axios.get(`${API_BASE_URL}/appointments/patient`).catch(() => ({ data: [] }))
+      ]);
+      setConsultations(consRes.data);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const upcoming = (apptRes.data || []).filter(a => {
+        const d = new Date(a.date);
+        d.setHours(0, 0, 0, 0);
+        return d >= now && ['pending', 'confirmed'].includes(a.status);
+      });
+      setUpcomingCount(upcoming.length);
     } catch (err) { 
       console.error(err); 
     } finally { 
@@ -57,6 +69,7 @@ export default function PatientDashboard() {
 
   const treated = consultations.filter(c => c.status === 'treated').length;
   const pending = consultations.filter(c => c.status === 'pending').length;
+  const doctorsVisited = [...new Set(consultations.map(c => c.doctorId?._id).filter(Boolean))].length;
 
   const todayStr = new Date().toLocaleDateString('en-US', { 
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
@@ -112,15 +125,44 @@ export default function PatientDashboard() {
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon cyan"><Phone size={24} /></div>
-          <div className="stat-info">
-            <h4>Registered Contact</h4>
-            <div className="stat-value" style={{ fontSize: '1.05rem', fontWeight: 600, letterSpacing: '0.02em' }}>
-              {user?.phone ? `+91 ${user.phone}` : 'Not Linked'}
+        <Link to="/appointments" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="stat-card" style={{ cursor: 'pointer', transition: 'transform 0.15s ease' }}
+               onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+               onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+            <div className="stat-icon cyan"><Calendar size={24} /></div>
+            <div className="stat-info">
+              <h4>Upcoming Appointments</h4>
+              <div className="stat-value" style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+                {upcomingCount}
+                {upcomingCount > 0 && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                    scheduled →
+                  </span>
+                )}
+                {upcomingCount === 0 && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                    none
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </Link>
+      </div>
+
+      {/* Quick Actions Row */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+        <Link to="/discover" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+          <Search size={16} /> Find a Doctor
+        </Link>
+        <Link to="/appointments" className="btn btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+          <Calendar size={16} /> My Appointments
+        </Link>
+        {doctorsVisited > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.85rem', borderRadius: '0.5rem', background: 'var(--surface-hover)', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600 }}>
+            <Stethoscope size={15} /> {doctorsVisited} {doctorsVisited === 1 ? 'Doctor' : 'Doctors'} Visited
+          </span>
+        )}
       </div>
 
       {/* Consultations Card */}

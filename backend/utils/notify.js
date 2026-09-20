@@ -27,10 +27,10 @@ async function createNotification(io, { userId, type = 'general', title, message
       };
     }
 
-    // Live emit to client via Socket.io
+    // Live emit to the recipient's private room only (no global broadcast —
+    // notifications may contain private data like invitation tokens)
     if (io) {
-      io.emit(`notification_${userId}`, notification);
-      io.emit('notification_broadcast', { userId, notification });
+      io.to(`user_${userId}`).emit(`notification_${userId}`, notification);
     }
 
     return notification;

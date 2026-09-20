@@ -10,7 +10,7 @@ const protect = async (req, res, next) => {
   ) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'medzoo_super_secret_key_2026');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // SQL replace: User.findById(decoded.id).select('-password')
       let users;

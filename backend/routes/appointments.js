@@ -96,8 +96,14 @@ router.post('/', protect, async (req, res) => {
       return res.status(400).json({ message: 'Doctor, date, and time slot are required' });
     }
 
-    // Verify doctor exists
-    const doctors = await query("SELECT id FROM users WHERE id = ? AND role = 'doctor'", [doctorId]);
+    // Only patients (or clinic staff acting for themselves) can book — a doctor
+    // account cannot book appointments with other doctors through this route.
+    if (req.user.role === 'doctor') {
+      return res.status(403).json({ message: 'Doctor accounts cannot book appointments' });
+    }
+
+    // Verify doctor exists (fetch specialty for the linked consultation record)
+    const doctors = await query("SELECT id, specialty FROM users WHERE id = ? AND role = 'doctor'", [doctorId]);
     if (!doctors.length) {
       return res.status(404).json({ message: 'Doctor not found' });
     }
@@ -432,7 +438,6 @@ router.put('/:id/emergency', protect, async (req, res) => {
     if (io) {
       io.emit('appointment_update', formatted);
       if (formatted.isEmergency) {
-        io.emit('emergency_trigger', formatted);
         try {
           // Notify doctor
           await createNotification(io, {
@@ -442,6 +447,8 @@ router.put('/:id/emergency', protect, async (req, res) => {
             message: `URGENT: Emergency protocol triggered for patient ${formatted.patientId?.name || 'Patient'} on appointment #${appt.id}!`,
             data: { appointmentId: appt.id }
           });
+          // Scoped real-time alert to doctor's room (not broadcast to every client)
+          io.to(`user_${appt.doctor_id}`).emit('emergency_trigger', formatted);
           // Notify doctor's active staff
           const staff = await query("SELECT user_id FROM doctor_staff WHERE doctor_id = ? AND status = 'active'", [appt.doctor_id]);
           for (const s of staff) {
@@ -452,6 +459,7 @@ router.put('/:id/emergency', protect, async (req, res) => {
               message: `URGENT: Emergency protocol triggered for patient ${formatted.patientId?.name || 'Patient'} on appointment #${appt.id}!`,
               data: { appointmentId: appt.id }
             });
+            io.to(`user_${s.user_id}`).emit('emergency_trigger', formatted);
           }
         } catch (ne) {}
       }

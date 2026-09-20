@@ -1,5 +1,6 @@
 const express = require('express');
 const { protect } = require('../middleware/auth');
+const { rateLimit } = require('../middleware/rateLimit');
 const { query } = require('../config/db');
 
 const router = express.Router();
@@ -15,6 +16,37 @@ const formatDoctor = (d) => ({
 });
 
 /**
+ * @route   GET /api/doctors/public/:id
+ * @desc    Public, minimal doctor profile for QR-code landing pages.
+ *          No auth required. Does NOT expose email/phone.
+ *          Rate limited to discourage enumeration.
+ */
+router.get('/public/:id', rateLimit({ prefix: 'public-doctor', max: 60 }), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Invalid doctor id' });
+    }
+
+    const rows = await query(
+      `SELECT u.id, u.name, u.specialty, u.hospital, u.qualifications,
+              u.is_verified AS isVerified, u.avatar, u.experience,
+              u.address, u.locality, u.rating, u.ratings_count AS ratingsCount
+       FROM users u
+       WHERE u.id = ? AND u.role = 'doctor'`,
+      [id]
+    );
+
+    if (!rows.length) return res.status(404).json({ message: 'Doctor not found' });
+
+    res.json(formatDoctor(rows[0]));
+  } catch (error) {
+    console.error('Fetch public doctor error:', error);
+    res.status(500).json({ message: 'Error fetching doctor' });
+  }
+});
+
+/**
  * @route   GET /api/doctors
  * @desc    Get all doctors with optional search/filter
  */
@@ -23,7 +55,7 @@ router.get('/', protect, async (req, res) => {
     const { specialty, search } = req.query;
 
     let sql = `
-      SELECT u.id, u.name, u.email, u.specialty, u.hospital, u.qualifications,
+      SELECT u.id, u.name, u.specialty, u.hospital, u.qualifications,
              u.is_verified AS isVerified,
              u.avatar, u.experience, u.address, u.locality, u.rating, u.ratings_count AS ratingsCount,
              COUNT(DISTINCT c.patient_id) AS patientCount
@@ -54,12 +86,12 @@ router.get('/', protect, async (req, res) => {
 
 /**
  * @route   GET /api/doctors/:id
- * @desc    Get single doctor by ID
+ * @desc    Get single doctor by ID (authenticated)
  */
 router.get('/:id', protect, async (req, res) => {
   try {
     const rows = await query(
-      `SELECT u.id, u.name, u.email, u.specialty, u.hospital, u.qualifications,
+      `SELECT u.id, u.name, u.specialty, u.hospital, u.qualifications,
               u.is_verified AS isVerified,
               u.avatar, u.experience, u.address, u.locality, u.rating, u.ratings_count AS ratingsCount,
               COUNT(DISTINCT c.patient_id) AS patientCount
