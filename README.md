@@ -44,7 +44,7 @@
 
   <br /><br />
 
-  > **MedZoo bridges the gap between patients and doctors** — enabling real-time appointment booking, digital consultations, GPS-powered clinic navigation, and complete clinic management — all in one platform.
+  > **MedZoo bridges the gap between patients and doctors** — enabling real-time appointment booking, digital consultations, GPS-powered clinic navigation, QR-based doctor profiles, and complete clinic management — all in one platform.
 
   <br />
 
@@ -58,7 +58,43 @@
 
 <br />
 
-## 🌍 The Real Problem MedZoo Solves
+## 📌 Table of Contents
+
+- [🌍 Problems MedZoo Solves](#-problems-medzoo-solves)
+- [✨ Features — Detailed Breakdown](#-features--detailed-breakdown)
+  - [🔐 1. Authentication & Onboarding](#-1-authentication--onboarding)
+  - [🔍 2. Doctor Discovery & GPS-Ranked Search](#-2-doctor-discovery--gps-ranked-search)
+  - [📅 3. Smart Appointment Booking](#-3-smart-appointment-booking)
+  - [📍 4. GPS Navigation to Clinic](#-4-gps-navigation-to-clinic)
+  - [🩺 5. Consultation & Digital Prescriptions](#-5-consultation--digital-prescriptions)
+  - [📊 6. Analytics Dashboard (Doctor)](#-6-analytics-dashboard-doctor)
+  - [🤝 7. Doctor-to-Doctor Referral System](#-7-doctor-to-doctor-referral-system)
+  - [👩‍💼 8. Clinic Staff & Team Management](#-8-clinic-staff--team-management)
+  - [🔔 9. Real-Time Notifications (WebSocket)](#-9-real-time-notifications-websocket)
+  - [📄 10. PDF Report Export](#-10-pdf-report-export)
+  - [📱 11. Doctor QR Code & Standee](#-11-doctor-qr-code--standee)
+  - [👤 12. Profile Management & Avatars](#-12-profile-management--avatars)
+  - [📍 13. Clinic Location Picker (Doctor)](#-13-clinic-location-picker-doctor)
+  - [⭐ 14. Doctor Rating & Review System](#-14-doctor-rating--review-system)
+  - [🛡️ 15. Role-Based Access Control](#-15-role-based-access-control)
+- [🔄 How It Works — User Journeys](#-how-it-works--user-journeys)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [🏗️ Architecture](#️-architecture)
+- [🗄️ Database Design](#️-database-design)
+- [📡 API Endpoints](#-api-endpoints)
+- [📂 Project Structure](#-project-structure)
+- [🚀 Quick Start](#-quick-start)
+- [🚢 Deployment](#-deployment)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+
+<br />
+
+---
+
+<br />
+
+## 🌍 Problems MedZoo Solves
 
 <table>
 <tr>
@@ -74,6 +110,8 @@
 - 🔕 No instant communication between doctor and patient
 - 📄 Prescriptions are handwritten and often unreadable
 - 🔄 Referrals between specialists happen through phone calls
+- 👩‍💼 No streamlined way for clinic staff to manage reception queues
+- 📱 No digital way for walk-in patients to discover a doctor at a clinic
 
 </td>
 <td width="50%">
@@ -88,6 +126,8 @@
 - 🔔 **Instant WebSocket notifications** — real-time appointment updates
 - 💊 **Digital prescriptions** — medicine, dosage, duration — all typed & clear
 - 🤝 **Digital referral system** — refer patients with priority tagging
+- 👩‍💼 **Staff portal** — receptionist manages queue, billing & check-ins
+- 📱 **QR code standee** — walk-in patients scan QR → land on booking page
 
 </td>
 </tr>
@@ -104,7 +144,260 @@
 
 <br />
 
-## 🔄 How It Works — User Workflow & 2D Data Flow
+## ✨ Features — Detailed Breakdown
+
+Every feature below is **live and functional** on [medzoo.vercel.app](https://medzoo.vercel.app). Here's what each one does and the problem it solves.
+
+<br />
+
+### 🔐 1. Authentication & Onboarding
+
+| What it does | How it works |
+|:---|:---|
+| **Google OAuth 1-Tap Login** | Patients/doctors sign in with their Google account in a single click — no password to remember. Uses `@react-oauth/google` + `google-auth-library` backend verification. |
+| **Phone + Email Registration** | Multi-step registration form — basic info → role selection → doctor-specific fields (specialty, hospital, qualifications, experience). |
+| **Post-OAuth Profile Completion** | If a user signs in with Google for the first time, they are redirected to `/complete-profile` to set phone number, password, role (patient/doctor), and doctor-specific details. |
+| **Forgot Password (OTP via Email)** | User enters email → backend sends a 6-digit OTP via Gmail SMTP (Nodemailer) → user enters OTP + new password to reset. |
+| **Change Password** | Authenticated users can change their password from the profile page with live strength validation (length, upper/lowercase, number, symbol). |
+| **JWT-based Session** | Every login issues a 30-day JWT token. Stored in localStorage. Axios interceptors auto-attach token and handle 401 → auto-logout. |
+
+> **Problem solved:** Eliminates friction in account creation. Patients who "just want to book" can do it with one Google tap. Doctors who need a full profile can complete it step-by-step.
+
+<br />
+
+---
+
+### 🔍 2. Doctor Discovery & GPS-Ranked Search
+
+| What it does | How it works |
+|:---|:---|
+| **Search by name, specialty, hospital** | Live search input filters doctors as user types. Works across name, specialty, and hospital fields. |
+| **Filter by specialty** | Dropdown filter: General, Cardiologist, Dermatologist, Neurologist, Psychiatrist, Dentist. |
+| **GPS-ranked results** | Patient's browser requests device GPS (Geolocation API). If allowed, doctors are **sorted by distance** from the patient. Clinic lat/lng stored in DB. |
+| **Fallback to locality** | If GPS is denied or unavailable, doctors are ranked by the patient's saved locality (city/area). |
+| **Doctor card details** | Each card shows: doctor name, specialty, hospital, experience (years), rating (1-5★), total patients, verified badge, locality, and distance (if GPS active). |
+
+> **Problem solved:** A patient in a new city can open MedZoo, allow location, and instantly see the nearest cardiologist sorted by distance — no searching Google Maps separately.
+
+<br />
+
+---
+
+### 📅 3. Smart Appointment Booking
+
+| What it does | How it works |
+|:---|:---|
+| **Date picker** | Patient selects a future date. Only today and future dates are allowed. |
+| **Dynamic 30-min time slots** | Backend generates 30-minute slots (09:00 AM → 06:30 PM). Already-booked slots for that doctor + date are excluded. |
+| **No double-booking** | Database enforces `UNIQUE KEY (doctor_id, date, time_slot)` — it's physically impossible to double-book a slot. |
+| **Emergency flag** | Patients can mark an appointment as "emergency" — it gets priority visibility for the doctor/staff. |
+| **Booking reason** | Optional text field for patient to describe symptoms or purpose. |
+| **Instant confirmation** | On successful booking, a WebSocket notification is pushed to the doctor in real-time. Patient gets a success confirmation. |
+| **My Appointments tab** | Patients can switch to "My Appointments" tab to see all their bookings with status (pending, confirmed, in-progress, completed, cancelled). |
+
+> **Problem solved:** No more calling the clinic 5 times to check slot availability. Patient sees exactly which slots are free and books instantly.
+
+<br />
+
+---
+
+### 📍 4. GPS Navigation to Clinic
+
+| What it does | How it works |
+|:---|:---|
+| **Get Directions button** | One-click button on each doctor card or appointment. |
+| **Browser Geolocation API** | Requests user's current GPS coordinates (latitude, longitude). |
+| **Google Maps integration** | Opens Google Maps with `origin=user's GPS` and `destination=clinic's lat,lng`. Full turn-by-turn navigation. |
+
+> **Problem solved:** Patient doesn't need to separately search for the clinic address on Google Maps — one tap from MedZoo does it.
+
+<br />
+
+---
+
+### 🩺 5. Consultation & Digital Prescriptions
+
+| What it does | How it works |
+|:---|:---|
+| **Create consultation** | Doctor fills: patient phone/email, diagnosis, category (Cardiology, Neurology, etc.), status (pending/treated/referred/follow-up), and clinical notes. |
+| **Auto-link patient** | Backend resolves the patient's phone number or email to their user account. If not registered, it still creates a record. |
+| **Multi-medicine prescription builder** | For each consultation, doctor can add **multiple medicines** — each with name, dosage (e.g., "500mg twice daily"), and duration (e.g., "7 days"). |
+| **Edit/update consultation** | Doctor can update diagnosis, status, notes, and add/remove prescriptions after creation. |
+| **View consultation history** | Both doctor and patient can see full history of all consultations with prescriptions. |
+| **Category classification** | Each consultation is tagged with a medical category (Cardiology, Dermatology, Neurology, Orthopedics, Pediatrics, General, Oncology, Psychiatry, Other) — feeds the analytics pie chart. |
+
+> **Problem solved:** No more illegible handwritten prescriptions. Every medicine, dose, and duration is digitally recorded and searchable forever.
+
+<br />
+
+---
+
+### 📊 6. Analytics Dashboard (Doctor)
+
+| What it does | How it works |
+|:---|:---|
+| **Key metrics cards** | Total patients, total consultations, treatment success rate (%), average rating — all at a glance with trend indicators (↑/↓). |
+| **Patient trend chart** | Interactive **Line chart** (Chart.js) showing patient count over time. Toggle between **daily** and **weekly** views. |
+| **Disease category breakdown** | **Pie/Doughnut chart** showing distribution of consultations across categories (Cardiology, Neurology, etc.). |
+| **Consultation status breakdown** | **Doughnut chart** showing treated vs pending vs referred vs follow-up counts. |
+| **Peak hours analysis** | **Bar chart** showing which hours of the day have the most consultations — helps doctors optimize scheduling. |
+| **Auto-refresh** | Dashboard auto-refreshes every 30 seconds. Manual refresh button also available. |
+
+> **Problem solved:** Doctors running busy clinics have zero visibility into trends. MedZoo gives them a live analytics dashboard to understand their practice — peak hours, most common diseases, treatment success rate.
+
+<br />
+
+---
+
+### 🤝 7. Doctor-to-Doctor Referral System
+
+| What it does | How it works |
+|:---|:---|
+| **Create referral** | Doctor enters: receiving doctor's email, patient's email, reason for referral, notes, and **priority** (low / medium / high / critical). |
+| **Incoming referrals tab** | Receiving doctor sees all incoming referrals with patient info, referring doctor, reason, priority badge, and status. |
+| **Accept / Decline** | Receiving doctor can accept or decline each referral with one click. |
+| **Outgoing referrals tab** | Referring doctor can track status of all sent referrals. |
+| **Real-time notification** | When a referral is created, the receiving doctor gets an instant WebSocket notification. |
+
+> **Problem solved:** Currently, doctor-to-doctor referrals happen over WhatsApp or phone calls with no tracking. MedZoo creates a formal referral system with priority tagging and status tracking.
+
+<br />
+
+---
+
+### 👩‍💼 8. Clinic Staff & Team Management
+
+| What it does | How it works |
+|:---|:---|
+| **Invite staff** | Doctor enters a phone number → system generates a unique **invitation token link** (e.g., `/accept-invitation/:token`). Link expires after set time. |
+| **Staff registration** | Staff member opens the link → registers with name, phone, password → auto-linked to the doctor's clinic. |
+| **Staff appointment access** | Staff (receptionist) gets their own dashboard = **AppointmentManager** — they can see all of the doctor's appointments, update statuses, and manage the daily queue. |
+| **Team panel** | Doctor can see all active team members and pending invitations. Can cancel pending invitations or remove team members. |
+| **Real-time team sync** | Socket.IO event `team_update_{userId}` pushes live updates when team changes happen. |
+| **Leave clinic** | Staff can voluntarily leave a doctor's clinic from their dashboard. |
+| **Payment status** | Staff can mark appointments as Paid/Unpaid for billing tracking. |
+
+> **Problem solved:** A busy doctor can invite their receptionist to MedZoo. The receptionist manages the queue (check-in, mark paid, update status) while the doctor focuses on patients.
+
+<br />
+
+---
+
+### 🔔 9. Real-Time Notifications (WebSocket)
+
+| What it does | How it works |
+|:---|:---|
+| **Instant push notifications** | Socket.IO WebSocket connection per user. Events: `notification_{userId}` and `notification_broadcast`. |
+| **Notification types** | Appointment booked, appointment status change, referral received, team update, emergency alert — each with a distinct icon and color. |
+| **Bell icon with unread count** | Navbar shows a bell icon with a red badge showing unread count. |
+| **Dropdown panel** | Click bell → dropdown shows all notifications sorted by newest. Each notification has: icon, title, message, timestamp, read/unread indicator. |
+| **Mark as read** | Click a notification to mark it as read. "Mark all as read" button for bulk action. |
+| **Delete notification** | Individual notification can be deleted. |
+
+> **Problem solved:** Without real-time alerts, doctors miss new bookings until they manually refresh. MedZoo pushes instant notifications — no polling, no delay.
+
+<br />
+
+---
+
+### 📄 10. PDF Report Export
+
+| What it does | How it works |
+|:---|:---|
+| **One-click PDF** | On the Patients page, doctor clicks "Download PDF" → generates a formatted PDF of the patient's consultation and prescription history. |
+| **Professional formatting** | Uses **jsPDF + jspdf-autotable** — tables with medicine name, dosage, duration. Includes doctor info header, patient info, diagnosis, notes. |
+| **Searchable & shareable** | Generated PDF can be saved, printed, emailed, or shared via WhatsApp. |
+
+> **Problem solved:** When patients ask for a printed summary of their treatments, the doctor can generate a professional PDF in one click — no manual typing.
+
+<br />
+
+---
+
+### 📱 11. Doctor QR Code & Standee
+
+| What it does | How it works |
+|:---|:---|
+| **Generate QR code** | Doctor opens QR modal from their profile → a QR code is generated encoding their **direct booking URL** (`/discover?doctor={id}`). |
+| **High error-correction** | QR uses Level H error correction (can be 30% damaged and still scan). Sized at 500×500px for print clarity. |
+| **Copy profile link** | One-click "Copy Link" button to share the booking URL via WhatsApp, SMS, etc. |
+| **Download QR** | Download the QR code as a PNG image. |
+| **Download clinic standee** | Download a **print-ready standee** (canvas-rendered) with doctor's name, specialty, hospital, and QR — ready to place at the clinic reception or door. |
+| **Share via Web Share API** | Native OS share sheet to share the QR image with any app. |
+
+> **Problem solved:** Walk-in patients at a clinic can scan the QR standee on the desk → land directly on the doctor's booking page → book an appointment instantly without waiting in line.
+
+<br />
+
+---
+
+### 👤 12. Profile Management & Avatars
+
+| What it does | How it works |
+|:---|:---|
+| **Full profile page** | Displays and edits: name, email, phone, role, age, gender, blood group, address, locality. |
+| **Doctor-specific fields** | Specialty, hospital, qualifications, years of experience. |
+| **Preset SVG avatars** | Choose from 4 illustrated avatars (Doctor Male, Doctor Female, Patient Male, Patient Female). |
+| **Custom avatar upload** | Upload a profile photo (Base64 encoded, stored in DB). |
+| **Live password strength** | When changing password, live indicators show: length ≥ 6, upper+lower case, number, symbol. |
+
+> **Problem solved:** Personalized profiles build trust. Patients see the doctor's qualifications, experience, and photo before booking — not a blank card.
+
+<br />
+
+---
+
+### 📍 13. Clinic Location Picker (Doctor)
+
+| What it does | How it works |
+|:---|:---|
+| **Pin clinic location** | Doctor clicks "Pin My Clinic" → browser requests GPS → saves latitude/longitude to the doctor's profile. |
+| **Update location** | Doctor can re-pin if they move clinics. Shows timestamp of last update. |
+| **Clear location** | Doctor can clear saved location if needed. |
+| **Used for patient distance ranking** | This saved lat/lng is what the Doctor Discovery page uses to calculate and sort by distance. |
+
+> **Problem solved:** Without a fixed clinic location, GPS-based discovery can't work. This component lets doctors set their clinic's exact coordinates once — patients benefit every time.
+
+<br />
+
+---
+
+### ⭐ 14. Doctor Rating & Review System
+
+| What it does | How it works |
+|:---|:---|
+| **Rate after consultation** | After a consultation is completed, the patient can rate the doctor (1-5 stars) from their dashboard. |
+| **Rate after appointment** | Patients can also rate from their appointments list. |
+| **Aggregate rating** | Backend calculates weighted average: `new_rating = ((old_rating × old_count) + new_rating) / (old_count + 1)`. Stored as `rating` and `ratings_count` on the doctor's profile. |
+| **Public display** | Rating (★ 4.8) and patient count shown on every doctor card in discovery. Higher-rated doctors stand out. |
+
+> **Problem solved:** Patients have no way to gauge a doctor's quality before visiting. Ratings from real patients provide social proof and help patients choose better.
+
+<br />
+
+---
+
+### 🛡️ 15. Role-Based Access Control
+
+| Role | Dashboard | Can Access |
+|:---|:---|:---|
+| **Patient** | Patient Dashboard — consultation history, upcoming appointments, ratings | Doctor Discovery, Booking, My Appointments, Profile |
+| **Doctor** | Doctor Dashboard — analytics charts, key metrics | Patients (consultations), Appointments, Referrals, Staff Management, QR Code, Profile |
+| **Staff** | Appointment Manager — the doctor's appointment queue | Appointments (of assigned doctor), Profile |
+
+- `ProtectedRoute` component checks `isAuthenticated`, `role`, and `isClinicStaff` before rendering.
+- Staff gets `allowStaffAssignment` flag — can access doctor's appointments but not other doctor features.
+- Unauthenticated users are redirected to `/login`. Wrong-role users are redirected to `/dashboard`.
+
+> **Problem solved:** Without role-based access, any logged-in user could see anything. MedZoo enforces strict boundaries — a patient can't access doctor analytics, a staff can't create referrals.
+
+<br />
+
+---
+
+<br />
+
+## 🔄 How It Works — User Journeys
 
 <br />
 
@@ -160,6 +453,7 @@ flowchart TD
     D2["🤝 5. Referral<br/>Specialist Transfer"]
     E["👩‍💼 6. Clinic Staff<br/>Invite Receptionist"]
     F["📊 7. Analytics<br/>Trends & Ratings"]
+    G["📱 8. QR Standee<br/>Walk-in Discovery"]
 
     A -->|"Clinic Data"| B
     B -->|"New Booking"| C
@@ -170,6 +464,7 @@ flowchart TD
     D2 -->|"Send Referral"| F
     A -->|"Staff Token"| E
     E -->|"Linked Access"| C
+    A -->|"Generate QR"| G
 
     style A fill:#E91E63,color:#fff,stroke:#C2185B,stroke-width:2px
     style B fill:#FF4081,color:#fff,stroke:#F50057,stroke-width:2px
@@ -179,6 +474,7 @@ flowchart TD
     style D2 fill:#FF9100,color:#fff,stroke:#FF6D00,stroke-width:2px
     style E fill:#00BCD4,color:#fff,stroke:#0097A7,stroke-width:2px
     style F fill:#4CAF50,color:#fff,stroke:#388E3C,stroke-width:2px
+    style G fill:#FFD740,color:#000,stroke:#FFC400,stroke-width:2px
 ```
 
 <br />
@@ -222,88 +518,6 @@ flowchart TD
 
 <br />
 
-## ✨ Features at a Glance
-
-<br />
-
-<table>
-<tr>
-<td align="center" width="33%">
-
-### 🔍 Doctor Discovery
-
-Search by **specialty, name, hospital, experience**. View live ratings & patient count. Filter: General, Cardiologist, Dermatologist, Neurologist, Psychiatrist, Dentist.
-
-</td>
-<td align="center" width="33%">
-
-### 📅 Smart Booking
-
-Dynamic **30-min time slots** based on real doctor availability. Pick date → see slots → book instantly. No double-booking guaranteed.
-
-</td>
-<td align="center" width="33%">
-
-### 📍 GPS Navigation
-
-Click **"Get Directions"** → browser asks location permission → opens Google Maps with **your GPS location → doctor's clinic** route.
-
-</td>
-</tr>
-<tr>
-<td align="center" width="33%">
-
-### 📊 Analytics Dashboard
-
-Interactive **Chart.js** charts: patient trends (line), disease categories (pie), peak hours (bar). Key metrics: total patients, consultations, avg rating.
-
-</td>
-<td align="center" width="33%">
-
-### 💊 Digital Prescriptions
-
-Multi-medicine builder per consultation. **Medicine name + dosage + duration** — all digital, searchable, and exportable as PDF.
-
-</td>
-<td align="center" width="33%">
-
-### 🔔 Real-Time Alerts
-
-**Socket.IO WebSocket** notifications. Instant updates for bookings, status changes, referrals, and emergency alerts. Read/unread tracking.
-
-</td>
-</tr>
-<tr>
-<td align="center" width="33%">
-
-### 🤝 Case Referrals
-
-Doctor-to-doctor referral with **priority tagging** (low → critical). Track status: pending → accepted → completed. Lookup by phone or email.
-
-</td>
-<td align="center" width="33%">
-
-### 🔐 Secure Auth
-
-**Google OAuth 2.0** 1-Tap + JWT + bcrypt. Role-based access (Patient/Doctor/Staff). OTP password recovery via email. Auto-logout on token expiry.
-
-</td>
-<td align="center" width="33%">
-
-### 📄 PDF Reports
-
-One-click **patient history export** — consultations, prescriptions, diagnoses — formatted as professional PDF using jsPDF + AutoTable.
-
-</td>
-</tr>
-</table>
-
-<br />
-
----
-
-<br />
-
 ## 🛠️ Tech Stack
 
 <br />
@@ -337,6 +551,7 @@ One-click **patient history export** — consultations, prescriptions, diagnoses
 | jsPDF | 4.2 |
 | Socket.IO Client | 4.8 |
 | Google OAuth | 0.13 |
+| QRCode (qrcode) | 1.5 |
 
 </td>
 <td valign="top">
@@ -352,6 +567,7 @@ One-click **patient history export** — consultations, prescriptions, diagnoses
 | Multer | 2.1 |
 | Nodemailer | 10.0 |
 | Google Auth | 11.0 |
+| QRCode | 1.5 |
 
 </td>
 <td valign="top">
@@ -451,6 +667,7 @@ graph TB
 4️⃣  Real-time events (appointments, alerts) → pushed via Socket.IO
 5️⃣  Get Directions → Browser Geolocation API → Google Maps with GPS origin
 6️⃣  Password Reset → Backend → Nodemailer → Gmail SMTP → User inbox
+7️⃣  QR Scan → Deep-link to /discover?doctor={id} → Direct booking page
 ```
 
 <br />
@@ -459,11 +676,11 @@ graph TB
 
 <br />
 
-## 🗄️ Database Design & 2D Data Flow
+## 🗄️ Database Design
 
 <br />
 
-### 🔄 1. 2D Dynamic Database Architecture & Data Flow
+### 🔄 1. Dynamic Database Architecture & Data Flow
 
 ```mermaid
 flowchart TD
@@ -508,7 +725,7 @@ flowchart TD
 
 <br />
 
-### 🗃️ 2. Comprehensive Entity-Relationship Diagram (ERD)
+### 🗃️ 2. Entity-Relationship Diagram (ERD)
 
 ```mermaid
 erDiagram
@@ -542,6 +759,9 @@ erDiagram
         int ratings_count
         boolean is_verified
         text avatar
+        decimal latitude
+        decimal longitude
+        timestamp location_updated_at
         timestamp created_at
     }
 
@@ -631,6 +851,7 @@ erDiagram
         varchar type
         varchar title
         text message
+        json data
         boolean is_read
         timestamp created_at
     }
@@ -644,6 +865,7 @@ erDiagram
 |:---|:---|:---|:---|:---|:---|
 | **Patient Registration / Google Login** | Patient | `users` (`INSERT`) | — | `email UK`, `phone UK`, bcrypt hash | Issues JWT Token (`role: patient`) |
 | **Doctor Profile Setup** | Doctor | `users` (`UPDATE`) | — | Role verification (`role = 'doctor'`) | Updates discovery filters & cache |
+| **Clinic Location Pin** | Doctor | `users` (`UPDATE latitude, longitude`) | — | Lat/lng decimal validation | Enables GPS-ranked search for patients |
 | **Staff Invite & Onboarding** | Doctor / Staff | `invitations` (`INSERT`) | `users` (`INSERT`), `doctor_staff` (`INSERT`) | Crypto UUID `token UK`, `expires_at > NOW()` | Sends Invite Link via Nodemailer |
 | **Slot Booking** | Patient / Staff | `appointments` (`INSERT`) | `notifications` (`INSERT`) | `no_double_booking (doctor_id, date, time_slot)` | Socket.IO `appointment:created` alert |
 | **Consultation & Rx Creation** | Doctor | `consultations` (`INSERT`) | `prescriptions` (Batch `INSERT`), `appointments` (`UPDATE`) | FK `consultation_id ON DELETE CASCADE` | Live medical records update |
@@ -678,6 +900,7 @@ erDiagram
 | `POST` | `/accept-invitation` | ❌ | Register via token |
 | `GET` | `/me` | 🔒 | Current user profile |
 | `PUT` | `/profile` | 🔒 | Update profile |
+| `GET` | `/team` | 🔒 | Get team members & pending invitations |
 
 </details>
 
@@ -707,7 +930,11 @@ erDiagram
 | `GET` | `/` | 🔒 | List consultations |
 | `POST` | `/` | 🔒 | Create with prescriptions |
 | `PUT` | `/:id` | 🔒 | Update consultation |
-| `GET` | `/patient/:id` | 🔒 | Patient history |
+| `GET` | `/patient` | 🔒 | Patient's consultation history |
+| `GET` | `/patient/:id` | 🔒 | Specific patient history |
+| `GET` | `/doctor` | 🔒 | Doctor's consultation list |
+| `GET` | `/analytics` | 🔒 | Doctor analytics data |
+| `POST` | `/:id/rate` | 🔒 | Rate a consultation |
 
 </details>
 
@@ -718,7 +945,7 @@ erDiagram
 
 | Method | Endpoint | Auth | Description |
 |:---:|:---|:---:|:---|
-| `GET` | `/` | ❌ | Search & filter |
+| `GET` | `/` | ❌ | Search & filter (with GPS ranking) |
 | `GET` | `/:id` | ❌ | Doctor profile |
 
 </details>
@@ -730,9 +957,11 @@ erDiagram
 
 | Method | Endpoint | Auth | Description |
 |:---:|:---|:---:|:---|
-| `GET` | `/` | 🔒 | Sent/received |
+| `GET` | `/incoming` | 🔒 | Received referrals |
+| `GET` | `/outgoing` | 🔒 | Sent referrals |
 | `POST` | `/` | 🔒 | Create referral |
-| `PUT` | `/:id/status` | 🔒 | Accept/decline |
+| `PUT` | `/:id/accept` | 🔒 | Accept referral |
+| `PUT` | `/:id/decline` | 🔒 | Decline referral |
 
 </details>
 
@@ -746,6 +975,20 @@ erDiagram
 | `GET` | `/` | 🔒 | Get notifications |
 | `PUT` | `/:id/read` | 🔒 | Mark as read |
 | `PUT` | `/read-all` | 🔒 | Mark all read |
+
+</details>
+
+<details>
+<summary><b>👥 Contacts</b> — <code>/api/contacts</code></summary>
+
+<br />
+
+| Method | Endpoint | Auth | Description |
+|:---:|:---|:---:|:---|
+| `GET` | `/` | 🔒 | List contacts |
+| `POST` | `/` | 🔒 | Add a contact |
+| `PUT` | `/:id` | 🔒 | Update contact |
+| `DELETE` | `/:id` | 🔒 | Delete contact |
 
 </details>
 
@@ -769,9 +1012,27 @@ MedZoo/
 │   │   ├── contexts/
 │   │   │   └── AuthContext.jsx        # Auth state + Axios interceptors
 │   │   └── components/
-│   │       ├── 📁 common/             # Shared (Login, Register, Profile, Navbar...)
-│   │       ├── 📁 doctor/             # Dashboard, Appointments, Patients, Referrals
-│   │       └── 📁 patient/            # Dashboard, Doctor Discovery + GPS Booking
+│   │       ├── 📁 common/             # Shared components
+│   │       │   ├── Login.jsx          # Email/phone login form
+│   │       │   ├── Register.jsx       # Multi-step registration
+│   │       │   ├── ForgotPasswordOTP.jsx # OTP-based password reset
+│   │       │   ├── CompleteProfile.jsx # Post-OAuth profile setup
+│   │       │   ├── AcceptInvitation.jsx # Staff invite acceptance
+│   │       │   ├── Profile.jsx        # Full profile management + avatars
+│   │       │   ├── Navbar.jsx         # Top navigation bar
+│   │       │   ├── NotificationsDropdown.jsx # Real-time bell + dropdown
+│   │       │   ├── ClinicLocationPicker.jsx  # GPS clinic pin (doctor)
+│   │       │   ├── GoogleAuthButton.jsx     # Google 1-Tap button
+│   │       │   └── ErrorBoundary.jsx  # React error boundary
+│   │       ├── 📁 doctor/             # Doctor-only components
+│   │       │   ├── DoctorDashboard.jsx # Analytics charts + metrics
+│   │       │   ├── AppointmentManager.jsx # Queue + staff + invites
+│   │       │   ├── PatientList.jsx    # Consultations + prescriptions + PDF
+│   │       │   ├── ReferralManager.jsx # Referral create/accept/decline
+│   │       │   └── DoctorQR.jsx       # QR code generator + standee
+│   │       └── 📁 patient/            # Patient-only components
+│   │           ├── PatientDashboard.jsx # History + upcoming + ratings
+│   │           └── DoctorDiscovery.jsx  # Search + GPS + booking
 │   └── vite.config.js
 │
 ├── 📁 backend/                        # 🖥️ Express 5 REST API
@@ -785,7 +1046,8 @@ MedZoo/
 │   │                                  # contacts, doctors, notifications, referrals
 │   └── utils/
 │       ├── notify.js                  # WebSocket notification helper
-│       └── mailer.js                  # Nodemailer email service
+│       ├── mailer.js                  # Nodemailer email service
+│       └── geo.js                     # Latitude/longitude validation
 │
 ├── vercel.json                        # Vercel services + rewrites
 └── README.md
