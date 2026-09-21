@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS users (
   ratings_count   INT          DEFAULT 0,
   is_verified     TINYINT(1)   DEFAULT 0,
   avatar          TEXT,
+  latitude        DECIMAL(10,7) DEFAULT NULL,
+  longitude       DECIMAL(10,7) DEFAULT NULL,
+  location_updated_at TIMESTAMP NULL DEFAULT NULL,
   created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

@@ -175,10 +175,14 @@ const initSchema = async () => {
     `);
 
     // Ensure patient columns (age, gender, blood_group) exist in users table
+    // plus clinic-location columns (latitude/longitude) used for nearby-doctor ranking
     const patientCols = [
       { name: 'age', type: 'INT NULL DEFAULT NULL' },
       { name: 'gender', type: 'VARCHAR(20) DEFAULT ""' },
-      { name: 'blood_group', type: 'VARCHAR(10) DEFAULT ""' }
+      { name: 'blood_group', type: 'VARCHAR(10) DEFAULT ""' },
+      { name: 'latitude', type: 'DECIMAL(10,7) NULL DEFAULT NULL' },
+      { name: 'longitude', type: 'DECIMAL(10,7) NULL DEFAULT NULL' },
+      { name: 'location_updated_at', type: 'TIMESTAMP NULL DEFAULT NULL' }
     ];
     for (const col of patientCols) {
       try {

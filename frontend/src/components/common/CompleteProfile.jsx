@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import ClinicLocationPicker from './ClinicLocationPicker';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -57,6 +58,13 @@ export default function CompleteProfile() {
     gender: user?.gender || '',
     bloodGroup: user?.bloodGroup || ''
   });
+
+  // Clinic coordinates for doctors — captured before submit, saved on completion.
+  const [clinicCoords, setClinicCoords] = useState(
+    user?.latitude != null && user?.longitude != null
+      ? { lat: user.latitude, lng: user.longitude, updatedAt: user.locationUpdatedAt }
+      : null
+  );
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -154,7 +162,11 @@ export default function CompleteProfile() {
         experience: Number(form.experience) || 0,
         age: form.age ? Number(form.age) : null,
         gender: form.gender.trim(),
-        bloodGroup: form.bloodGroup.trim()
+        bloodGroup: form.bloodGroup.trim(),
+        // Doctor clinic location (optional) — enables nearby-patient ranking
+        ...(form.role === 'doctor' && clinicCoords
+          ? { latitude: clinicCoords.lat, longitude: clinicCoords.lng }
+          : {})
       });
 
       updateUser({ ...res.data, isProfileIncomplete: false });
@@ -565,6 +577,16 @@ export default function CompleteProfile() {
                 />
               </div>
             </div>
+
+            {/* Clinic coordinates — captured locally, saved when the form is submitted */}
+            <ClinicLocationPicker
+              latitude={clinicCoords?.lat ?? null}
+              longitude={clinicCoords?.lng ?? null}
+              updatedAt={clinicCoords?.updatedAt}
+              onSave={async (lat, lng) => {
+                setClinicCoords(lat == null || lng == null ? null : { lat, lng, updatedAt: new Date().toISOString() });
+              }}
+            />
 
             {/* Action Buttons: Back + Submit */}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>

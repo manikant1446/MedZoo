@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Star, Users, ShieldCheck, Calendar, Clock, X, CheckCircle, ChevronLeft, MapPin } from 'lucide-react';
+import { Search, Star, Users, ShieldCheck, Calendar, Clock, X, CheckCircle, ChevronLeft, MapPin, Navigation, Locate, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function DoctorDiscovery() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const isAppointmentsTab = searchParams.get('tab') === 'appointments';
   const [doctors, setDoctors] = useState([]);
   const [search, setSearch] = useState('');
   const [specialty, setSpecialty] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Patient's live location — transient by design: used only to rank this
+  // session's results and NEVER written to the database.
+  const [patientLocation, setPatientLocation] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('idle'); // idle | locating | active | denied | unsupported
+  const [locationError, setLocationError] = useState('');
 
   // Booking state
   const [bookingDoctor, setBookingDoctor] = useState(null);
@@ -36,6 +44,50 @@ export default function DoctorDiscovery() {
     }
   }, [searchParams]);
 
+  // Request device location. On denial/error we fall back to the patient's
+  // saved locality so ranking still works (backend handles both tiers).
+  const enableMyLocation = () => {
+    setLocationError('');
+
+    if (!navigator.geolocation) {
+      setLocationStatus('unsupported');
+      setLocationError('Geolocation is not supported by this browser. Showing doctors near your saved locality.');
+      return;
+    }
+
+    setLocationStatus('locating');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setPatientLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setLocationStatus('active');
+        setLocationError('');
+        setLoading(true);
+      },
+      (error) => {
+        setPatientLocation(null);
+        setLocationStatus('denied');
+        setLocationError(
+          error.code === error.PERMISSION_DENIED
+            ? 'Location permission denied. Showing doctors near your saved locality.'
+            : error.code === error.TIMEOUT
+              ? 'Locating timed out. Showing doctors near your saved locality.'
+              : 'Could not determine your location. Showing doctors near your saved locality.'
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const clearMyLocation = () => {
+    setPatientLocation(null);
+    setLocationStatus('idle');
+    setLocationError('');
+    setLoading(true);
+  };
+
   const handleTabChange = (show) => {
     setShowAppointments(show);
     if (show) {
@@ -58,6 +110,12 @@ export default function DoctorDiscovery() {
         const params = {};
         if (search) params.search = search;
         if (specialty) params.specialty = specialty;
+        // Live location (if the patient enabled it) + saved locality fallback
+        if (patientLocation) {
+          params.lat = patientLocation.lat;
+          params.lng = patientLocation.lng;
+        }
+        if (user?.locality) params.locality = user.locality;
         const res = await axios.get(`${API_BASE_URL}/doctors`, { params });
         setDoctors(res.data);
 
@@ -84,7 +142,7 @@ export default function DoctorDiscovery() {
       }
     };
     fetchDoctors();
-  }, [search, specialty, searchParams]);
+  }, [search, specialty, searchParams, patientLocation, user?.locality]);
 
   // Fetch slots when date changes
   useEffect(() => {
@@ -316,7 +374,7 @@ export default function DoctorDiscovery() {
           <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             <div className="search-bar" style={{ flex: 1, marginBottom: 0 }}>
               <Search />
-              <input placeholder="Search doctors by name, specialty, or hospital..."
+              <input placeholder="Search doctors by name, specialty, hospital or locality..."
                 value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <select className="form-select" style={{ width: '200px' }}
@@ -326,6 +384,53 @@ export default function DoctorDiscovery() {
             </select>
           </div>
 
+          {/* Nearby location bar */}
+          <div className="nearby-bar">
+            <div className="nearby-bar-left">
+              {locationStatus === 'active' ? (
+                <>
+                  <span className="nearby-chip nearby-chip-active">
+                    <Locate size={14} /> Using your current location
+                  </span>
+                  <span className="nearby-hint">
+                    Sorted by distance from where you are right now
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="nearby-chip">
+                    <MapPin size={14} />
+                    {user?.locality ? `Sorting near ${user.locality}` : 'No saved locality'}
+                  </span>
+                  <span className="nearby-hint">
+                    Enable location to see the closest clinics first
+                  </span>
+                </>
+              )}
+            </div>
+
+            {locationStatus === 'active' ? (
+              <button className="btn btn-ghost btn-sm" onClick={clearMyLocation}>
+                <X size={14} /> Stop using location
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={enableMyLocation}
+                disabled={locationStatus === 'locating'}
+              >
+                <Navigation size={14} />
+                {locationStatus === 'locating' ? 'Locating...' : 'Doctors near me'}
+              </button>
+            )}
+          </div>
+
+          {locationError && (
+            <div className="nearby-error">
+              <AlertCircle size={15} /> {locationError}
+            </div>
+          )}
+
           {/* Doctor Cards */}
           {loading ? (
             <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Loading doctors...</p>
@@ -334,7 +439,7 @@ export default function DoctorDiscovery() {
           ) : (
             <div className="grid grid-3">
               {doctors.map((doc) => (
-                <div key={doc._id} className="card">
+                <div key={doc._id} className={`card${doc.isNearby ? ' card-nearby' : ''}`}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                       {doc.avatar ? (
                         <img src={doc.avatar} alt={doc.name} style={{
@@ -360,9 +465,24 @@ export default function DoctorDiscovery() {
 
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
                       🏥 {doc.hospital || 'Independent Practice'}
+                      {doc.locality && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                          <MapPin size={12} /> {doc.locality}
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                      {doc.distanceKm != null && (
+                        <span className="badge badge-nearby">
+                          <Navigation size={12} /> {doc.distanceKm} km away
+                        </span>
+                      )}
+                      {doc.distanceKm == null && doc.isNearby && (
+                        <span className="badge badge-nearby">
+                          <MapPin size={12} /> Near you
+                        </span>
+                      )}
                       <span className="badge badge-info">
                         <Users size={12} /> {doc.patientCount} patients
                       </span>

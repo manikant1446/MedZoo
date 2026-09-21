@@ -16,7 +16,7 @@ const protect = async (req, res, next) => {
       let users;
       try {
         users = await query(
-          'SELECT id, name, email, phone, role, specialty, hospital, qualifications, experience, address, locality, age, gender, blood_group, rating, ratings_count, is_verified, avatar FROM users WHERE id = ?',
+          'SELECT id, name, email, phone, role, specialty, hospital, qualifications, experience, address, locality, age, gender, blood_group, rating, ratings_count, is_verified, avatar, latitude, longitude, location_updated_at FROM users WHERE id = ?',
           [decoded.id]
         );
       } catch (dbErr) {
@@ -52,7 +52,10 @@ const protect = async (req, res, next) => {
         rating: u.rating,
         ratingsCount: u.ratings_count,
         isVerified: !!u.is_verified,
-        avatar: u.avatar
+        avatar: u.avatar,
+        latitude: u.latitude != null ? parseFloat(u.latitude) : null,
+        longitude: u.longitude != null ? parseFloat(u.longitude) : null,
+        locationUpdatedAt: u.location_updated_at || null
       };
 
       return next();

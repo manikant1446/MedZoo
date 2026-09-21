@@ -6,6 +6,7 @@ const { OAuth2Client } = require('google-auth-library');
 const { query, getPool } = require('../config/db');
 const { createNotification } = require('../utils/notify');
 const { sendOtpEmail } = require('../utils/mailer');
+const { isValidLat, isValidLng } = require('../utils/geo');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const router = express.Router();
@@ -43,6 +44,9 @@ const buildUserResponse = (user, token) => ({
   rating: user.rating || 5.0,
   ratingsCount: user.ratings_count || 0,
   isVerified: !!user.is_verified,
+  latitude: user.latitude != null ? parseFloat(user.latitude) : null,
+  longitude: user.longitude != null ? parseFloat(user.longitude) : null,
+  locationUpdatedAt: user.location_updated_at || null,
   ...(token ? { token } : {}),
 });
 
@@ -200,7 +204,7 @@ router.get('/me', protect, (req, res) => {
  */
 router.put('/profile', protect, async (req, res) => {
   try {
-    const { name, phone, avatar, address, locality, experience, hospital, email, specialty, qualifications, age, gender, bloodGroup } = req.body;
+    const { name, phone, avatar, address, locality, experience, hospital, email, specialty, qualifications, age, gender, bloodGroup, latitude, longitude } = req.body;
 
     const userId = req.user._id;
 
@@ -256,6 +260,24 @@ router.put('/profile', protect, async (req, res) => {
       if (hospital !== undefined)      { fields.push('hospital = ?');       values.push(hospital.trim()); }
       if (qualifications !== undefined){ fields.push('qualifications = ?'); values.push(qualifications.trim()); }
       if (experience !== undefined)    { fields.push('experience = ?');     values.push(Number(experience) || 0); }
+
+      // Clinic location (fixed, doctor-managed). Accept null to clear it.
+      if (latitude !== undefined || longitude !== undefined) {
+        if (latitude === null || latitude === '' || longitude === null || longitude === '') {
+          fields.push('latitude = ?', 'longitude = ?', 'location_updated_at = NULL');
+          values.push(null, null);
+        } else {
+          const lat = Number(latitude);
+          const lng = Number(longitude);
+          if (!isValidLat(lat) || !isValidLng(lng)) {
+            return res.status(400).json({
+              message: 'Invalid clinic coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.'
+            });
+          }
+          fields.push('latitude = ?', 'longitude = ?', 'location_updated_at = NOW()');
+          values.push(lat.toFixed(7), lng.toFixed(7));
+        }
+      }
     }
 
     if (fields.length === 0) {
@@ -370,7 +392,7 @@ router.post('/google', async (req, res) => {
  */
 router.post('/complete-profile', protect, async (req, res) => {
   try {
-    const { name, phone, password, role, specialty, hospital, qualifications, experience, address, locality, age, gender, bloodGroup } = req.body;
+    const { name, phone, password, role, specialty, hospital, qualifications, experience, address, locality, age, gender, bloodGroup, latitude, longitude } = req.body;
     const userId = req.user._id;
 
     if (!phone || !password) {
@@ -401,9 +423,15 @@ router.post('/complete-profile', protect, async (req, res) => {
     const userRole = ['patient', 'doctor'].includes(role) ? role : (req.user.role || 'patient');
     const userName = name && name.trim() ? name.trim() : req.user.name;
 
+    // Clinic coordinates are doctor-only and optional at signup.
+    const hasCoords = userRole === 'doctor' && isValidLat(latitude) && isValidLng(longitude);
+    const clinicLat = hasCoords ? Number(latitude).toFixed(7) : null;
+    const clinicLng = hasCoords ? Number(longitude).toFixed(7) : null;
+
     await getPool().execute(
       `UPDATE users 
-       SET name = ?, phone = ?, password = ?, role = ?, specialty = ?, hospital = ?, qualifications = ?, experience = ?, address = ?, locality = ?, age = ?, gender = ?, blood_group = ?
+       SET name = ?, phone = ?, password = ?, role = ?, specialty = ?, hospital = ?, qualifications = ?, experience = ?, address = ?, locality = ?, age = ?, gender = ?, blood_group = ?,
+           latitude = ?, longitude = ?, location_updated_at = ${hasCoords ? 'NOW()' : 'NULL'}
        WHERE id = ?`,
       [
         userName,
@@ -419,6 +447,8 @@ router.post('/complete-profile', protect, async (req, res) => {
         age ? (Number(age) || null) : null,
         gender ? gender.trim() : '',
         bloodGroup ? bloodGroup.trim() : '',
+        clinicLat,
+        clinicLng,
         userId
       ]
     );

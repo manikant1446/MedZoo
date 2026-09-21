@@ -34,6 +34,7 @@ import {
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import DoctorQR from '../doctor/DoctorQR';
+import ClinicLocationPicker from './ClinicLocationPicker';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -296,6 +297,13 @@ export default function Profile() {
     } finally {
       setPasswordSaving(false);
     }
+  };
+
+  // Persist the doctor's clinic location immediately (independent of the
+  // profile form) so the button works even if other fields are unsaved.
+  const handleSaveClinicLocation = async (lat, lng) => {
+    const res = await axios.put(`${API_BASE_URL}/auth/profile`, { latitude: lat, longitude: lng });
+    updateUser(res.data);
   };
 
   const initials = user?.name
@@ -840,6 +848,17 @@ export default function Profile() {
                           placeholder="e.g. Flat 302, Green Valley Apartments"
                         />
                       </div>
+                    </div>
+
+                    {/* Clinic location — powers nearby-doctor ranking for patients */}
+                    <div style={{ marginTop: '1.25rem' }}>
+                      <ClinicLocationPicker
+                        latitude={user?.latitude}
+                        longitude={user?.longitude}
+                        updatedAt={user?.locationUpdatedAt}
+                        onSave={handleSaveClinicLocation}
+                        disabled={saving}
+                      />
                     </div>
 
                     <div style={{ marginTop: '0.5rem' }}>
